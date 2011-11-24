@@ -570,7 +570,8 @@ module VMC
         uris << URI.parse(@client.target).host
         apps.each do |app|
           app[:uris].each do |uri|
-            uris << uri
+            #only publish the uris in the local domain.
+            uris << uri if /\.local$/ =~ uri
           end
         end
         uris.uniq!
