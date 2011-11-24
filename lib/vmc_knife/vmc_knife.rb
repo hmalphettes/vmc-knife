@@ -521,16 +521,9 @@ module VMC
       end
       def update_pending()
         #could also use:
-        #sed -n '/^127\.0\.0\.1[[:space:]]*localhost[[:space:]]*#{uri}/p' /etc/hosts
-        res = false
-        File.open(@config, "r") do |file|
-          file.each_line do |s|
-            if /^[\s]*external_uri:/ =~ s
-              res = true unless /#{@uri}[\s]*$/ =~ s
-            end
-          end
-        end
-        return res
+        found_it=`sed -n '/^127\.0\.0\.1[[:space:]]*localhost[[:space:]]*#{uri}/p' #{@config}`
+        puts "found_it #{found_it}"
+        return true unless found_it
       end
       def execute()
         return unless update_pending
@@ -539,6 +532,7 @@ module VMC
         # replace it with the new uri if indeed there was a change.
         if true
           # use sudo.
+          puts "Executing sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{uri}/g'"
           `sudo -s sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{uri}/g' #{@config}`
         else
           lines = IO.readlines @config
