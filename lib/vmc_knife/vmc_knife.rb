@@ -532,7 +532,7 @@ module VMC
         # replace it with the new uri if indeed there was a change.
         if true
           # use sudo.
-          puts "Executing sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{uri}/g'"
+          puts "Executing sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g'"
           `sudo -s sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}`
         else
           lines = IO.readlines @config
