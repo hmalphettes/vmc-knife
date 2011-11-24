@@ -500,7 +500,7 @@ module VMC
           if pid!=nil && File.exists?(pid)
             display "Restarting the reconfigured cloud_controller"
             #assuming that the vcap symlink is in place.
-            `vcap restart cloud_controller`
+            `shopt -s expand_aliases; vcap restart cloud_controller`
           end
         end
       end
