@@ -616,7 +616,8 @@ module VMC
             file.puts uri + "\n"
           end
         end
-        `sudo avahi-publish-aliases` if @do_exec
+        #configured so that we don't need root privileges on /etc/avahi/aliases:
+        `avahi-publish-aliases` if @do_exec
       end
       def update_pending()
         already = already_published_uris()
