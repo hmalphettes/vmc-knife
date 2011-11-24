@@ -8,6 +8,7 @@ module VMC
   module Cli
     module Command
       autoload :Knife,         "#{ROOT_REL}/vmc_knife/commands/knife_cmds"
+      autoload :Knifeapps,         "#{ROOT_REL}/vmc_knife/commands/knife_cmds"
       autoload :Knifemisc,         "#{ROOT_REL}/vmc_knife/commands/knife_cmds"
     end
   end
