@@ -567,7 +567,8 @@ module VMC
         uris = Array.new
         return uris unless @client
         apps = @client.apps
-        uris << URI.parse(@client.target).host
+        api_uri = URI.parse(@client.target).host
+        uris << api_uri if /\.local$/ =~ api_uri
         apps.each do |app|
           app[:uris].each do |uri|
             #only publish the uris in the local domain.
