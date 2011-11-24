@@ -523,7 +523,7 @@ module VMC
         #could also use:
         found_it=`sed -n '/^127\.0\.0\.1[[:space:]]*localhost[[:space:]]*#{@uri}/p' #{@config}`
         puts "found_it #{found_it}"
-        return true unless found_it
+        return true unless found_it && found_it.strip.length != 0
       end
       def execute()
         return unless update_pending
