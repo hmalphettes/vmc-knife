@@ -1,0 +1,60 @@
+{
+  "sub_domain" : "intalio.local",
+  "target" : "api.#{this['sub_domain']}",
+  "email" : "bob@example.com",
+  "password" : "secret",
+  "recipes":
+  [{
+     "name" : "intagit lio_recipe",
+     "data_services" :
+     {
+        "pg_intalio" :
+        {
+            "name" : "pg_intalio",
+            "vendor" : "postgresql"
+        },
+        "mg_intalio" :
+        {
+            "name" : "mg_intalio",
+            "vendor" : "mongodb"
+        }
+     },
+     "applications":
+     {
+        "intalio" :
+        {
+           "name" : "intalio",
+           "uris" : ["#{this['sub_domain']}","intalio.#{this['sub_domain']}"],
+           "staging": { "stack" : "java", "model" : "spring" },
+           "resources":{"memory":3072},
+           "services": ["pg_intalio","mg_intalio"],
+           "env": [ "INTALIO_AUTH=http://#{this['recipes'][0]['applications']['oauth']['uris'][0]}",
+                    "JAVA_OPTS=-XX:MaxPermSize\=384m" ],
+           "repository":
+           {
+              "version":"1.0.0.123",
+              "url":"http://#{current['user']}:#{current['password']}@thedownload.com/download/it/#{current['version']}/intalio.war",
+              "user":"bob", "password":"secret"
+           }
+        },
+        "oauth" :
+        {
+           "name" : "oauth",
+           "uris" : ["oauth.#{this['sub_domain']}"],
+           "staging": { "stack" : "node", "model" : "nodejs" },
+           "resources": {"memory":64},
+           "services": "#{this['recipes'][0]['applications']['intalio']['services']}"
+        },
+        "admin" :
+        {
+           "name" : "admin",
+           "uris" : ["admin.#{this['sub_domain']}"],
+           "staging": { "stack" : "ruby19", "model" : "sinatra" },
+           "resources": {"memory":128},
+           "services": "#{this['recipes'][0]['applications']['intalio']['services']}",
+           "env": [ "INTALIO_AUTH=http://#{this['recipes'][0]['applications']['oauth']['uris'][0]}" ]
+        }
+     }
+  }]
+  
+}

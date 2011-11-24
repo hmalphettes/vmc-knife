@@ -1,0 +1,31 @@
+{
+  "name": "oauth",
+  "staging": {
+    "model": "node",
+    "stack": "node"
+  },
+  "uris": [
+    "oauth.vcap.me"
+  ],
+  "instances": 1,
+  "runningInstances": 1,
+  "resources": {
+    "memory": 64,
+    "disk": 2048,
+    "fds": 256
+  },
+  "state": "STARTED",
+  "services": [
+    "pg_intalio",
+    "mg_intalio"
+  ],
+  "version": "0316788c16ce3beaa664d5e954e0a77b5e2a4cae-6",
+  "env": [
+    "FOO=BAR","JOE=YO"
+  ],
+  "meta": {
+    "debug": null,
+    "version": 39,
+    "created": 1322032714
+  }
+}

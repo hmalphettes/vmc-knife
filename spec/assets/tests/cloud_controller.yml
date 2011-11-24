@@ -1,0 +1,12 @@
+---
+# Cloud Controller URI
+external_uri: api.vcap.local
+description: devbox
+support_address: http://support.intalio.com
+
+# local_route is the IP address of a well known server on your network, it
+# is used to choose the right ip address (think of hosts that have multiple nics
+# and IP addresses assigned to them) of the host running the cloud controller. Default
+# value of nil, should work in most cases.
+local_route: 
+

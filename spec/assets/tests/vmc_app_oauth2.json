@@ -1,0 +1,31 @@
+{
+  "name": "oauth_d",
+  "staging": {
+    "model": "node",
+    "stack": "node"
+  },
+  "uris": [
+    "oauth.iridium-cf.cloud.intalio.com"
+  ],
+  "instances": 1,
+  "runningInstances": 1,
+  "resources": {
+    "memory": 128,
+    "disk": 2048,
+    "fds": 256
+  },
+  "state": "STOPPED",
+  "services": [
+    "pg_intalio",
+    "mg_intalio"
+  ],
+  "version": "sfsdfsdfssfawdasdasd-6",
+  "env": [
+
+  ],
+  "meta": {
+    "debug": null,
+    "version": 39,
+    "created": 1322032714
+  }
+}
