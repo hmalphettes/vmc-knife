@@ -515,8 +515,8 @@ module VMC
     class VCAPUpdateEtcHosts
       def initialize(uri, etc_hosts_path=nil)
         @config = etc_hosts_path
+        @config ||="/etc/hosts"
         @uri = uri
-        @uri ||="/etc/hosts"
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
       def update_pending()
