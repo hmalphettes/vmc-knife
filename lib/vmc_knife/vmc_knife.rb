@@ -547,6 +547,7 @@ module VMC
             end
           end
         end
+        `sudo hostname #{@uri}`
       end
       def was_changed()
         @changed
