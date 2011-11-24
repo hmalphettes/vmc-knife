@@ -618,7 +618,7 @@ module VMC
         end
         #configured so that we don't need root privileges on /etc/avahi/aliases:
         #the backticks don't work; system() works:
-        system(avahi-publish-aliases) if @do_exec
+        system('avahi-publish-aliases') if @do_exec
       end
       def update_pending()
         already = already_published_uris()
