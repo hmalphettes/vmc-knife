@@ -586,7 +586,7 @@ module VMC
         root.recipes.each do |recipe|
           recipe.applications.each do |application|
             application.uris.each do |uri|
-              uris << uri
+              uris << uri if /\.local$/ =~ uri
             end
           end
         end
