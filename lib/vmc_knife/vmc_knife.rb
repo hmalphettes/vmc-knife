@@ -501,7 +501,9 @@ module VMC
             display "Restarting the reconfigured cloud_controller"
             #assuming that the vcap symlink is in place. maker sure the aliases
             # will be resolved.
-            `shopt -s expand_aliases; vcap restart cloud_controller`
+            #`shopt -s expand_aliases; vcap restart cloud_controller`
+            #TODO: something that looks nicer?
+            system ". ~/.bashrc;\n vcap restart cloud_controller"
           end
         end
       end
@@ -532,7 +534,7 @@ module VMC
         # replace it with the new uri if indeed there was a change.
         if true
           # use sudo.
-          puts "Executing sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}"
+          puts "Executing sudo sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}"
           `sudo sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}`
         else
           lines = IO.readlines @config
@@ -547,7 +549,8 @@ module VMC
             end
           end
         end
-        `sudo hostname #{@uri}`
+        #Edit the /etc/hostname file: (not a necessity so far).
+        #`sudo hostname #{@uri}`
       end
       def was_changed()
         @changed
