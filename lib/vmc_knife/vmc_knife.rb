@@ -520,6 +520,8 @@ module VMC
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
       def update_pending()
+        #could also use:
+        #sed -n '/^127\.0\.0\.1[[:space:]]*localhost[[:space:]]*#{uri}/p' /etc/hosts
         res = false
         File.open(@config, "r") do |file|
           file.each_line do |s|
@@ -531,17 +533,23 @@ module VMC
         return res
       end
       def execute()
+        return unless update_pending
         @changed = false
         # look for the line that starts with external_uri: 
         # replace it with the new uri if indeed there was a change.
-        lines = IO.readlines @config
-        File.open(@config, "w") do |file|
-          lines.each do |s|
-            if /^127.0.0.1[\s]+localhost[\s]*/ =~ s
-              @changed = true unless /^127.0.0.1[\s]+localhost[\s]+#{@uri}[\s]*/ =~ s
-              file.puts "127.0.0.1\tlocalhost #{@uri}\n"
-            else
-              file.puts s
+        if true
+          # use sudo.
+          `sudo -s sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{uri}/g' #{@config}`
+        else
+          lines = IO.readlines @config
+          File.open(@config, "w") do |file|
+            lines.each do |s|
+              if /^127.0.0.1[\s]+localhost[\s]*/ =~ s
+                @changed = true unless /^127.0.0.1[\s]+localhost[\s]+#{@uri}[\s]*/ =~ s
+                file.puts "127.0.0.1\tlocalhost #{@uri}\n"
+              else
+                file.puts s
+              end
             end
           end
         end
