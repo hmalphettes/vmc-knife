@@ -620,9 +620,9 @@ module VMC
       def update_pending()
         already = already_published_uris()
         length_already = already.length
-        already = already + all_uris()
-        already.uniq!
-        return length_already != already.length
+        allall = already + all_uris()
+        allall.uniq!
+        return length_already != allall.length
       end
     end
     
