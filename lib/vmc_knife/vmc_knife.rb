@@ -462,8 +462,9 @@ module VMC
     
     # This is really a server-side vcap admin feature.
     class VCAPUpdateCloudControllerConfig
-      def initialize(uri, cloud_controller_config="#{ENV['HOME']}/cloudfoundry/config/cloud_controller.yml")
+      def initialize(uri, cloud_controller_config=nil)
         @config = cloud_controller_config
+        @config ||="#{ENV['HOME']}/cloudfoundry/config/cloud_controller.yml"
         @uri = uri
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end

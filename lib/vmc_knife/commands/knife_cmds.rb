@@ -46,11 +46,11 @@ module VMC::Cli::Command
     
     # updates the cloud_controller
     def configure_cloud_controller(cloud_controller_yml=nil,manifest_file_path_or_uri=nil)
-      __update(manifest_file_path_or_uri,cloud_controller_yml,"VMC::KNIFE::VCAPUpdateCloudControllerConfig","cloud_controller"
+      __update(manifest_file_path_or_uri,cloud_controller_yml,VMC::KNIFE::VCAPUpdateCloudControllerConfig,"cloud_controller")
     end
     # updates /etc/hosts
     def configure_etc_hosts(etc_hosts=nil,manifest_file_path_or_uri=nil)
-      __update(manifest_file_path_or_uri,etc_hosts,"VMC::KNIFE::VCAPUpdateEtcHosts","/etc/hosts"
+      __update(manifest_file_path_or_uri,etc_hosts,VMC::KNIFE::VCAPUpdateEtcHosts,"/etc/hosts")
     end
     # updates /etc/avahi/aliases
     def configure_etc_avahi_aliases(etc_avahi_aliases=nil,manifest_file_path=nil)
@@ -61,7 +61,7 @@ module VMC::Cli::Command
     end
 
     private
-    def __update(manifest_file_path_or_uri,config,class_name, msg_label)
+    def __update(manifest_file_path_or_uri,config,_class,msg_label)
       unless manifest_file_path_or_uri.nil?
         if File.exists? manifest_file_path_or_uri
           man = load_manifest(manifest_file_path_or_uri)
@@ -74,7 +74,7 @@ module VMC::Cli::Command
         uri = man['target']
       end
       raise "No uri defined" unless uri
-      update_cc = Kernel.const_get(classname).new(uri,cloud_controller_yml)
+      update_cc = _class.new(uri,config)
       if update_cc.update_pending()
         display "Configuring #{msg_label} with uri: #{uri}" if VMC::Cli::Config.trace
         update_cc.execute()
@@ -120,17 +120,29 @@ module VMC::Cli::Command
   class Knifeapps < Apps
     include VMC::KNIFE::Cli
 
+    def configure_applications(app_names_regexp=nil,manifest_file_path=nil)
+      configure(nil,nil,app_names_regexp,manifest_file_path)
+    end
+    def configure_services(services_names_regexp=nil,manifest_file_path=nil)
+      configure(nil,nil,services_names_regexp,manifest_file_path)
+    end
+    def configure_recipes(recipe_names_regexp=nil,manifest_file_path=nil)
+      configure(recipe_names_regexp,nil,nil,manifest_file_path)
+    end
+              
     # Configure the applications according to their manifest.
     # The parameters are related to selecting a subset of the applications to configure.
     # nil means all apps for all recipes found in the manifest are configured.
     # @param recipes The list of recipes: nil: search the apps in all recipes
     # @param app_role_names The names of the apps in each recipe; nil: configure all apps found.
-    def configure_applications(recipes=nil,app_role_names=nil,manifest_file_path=nil)
+    def configure(recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
       man = load_manifest(manifest_file_path)
-      update_aliases = VMC::KNIFE::ApplicationManifestApplier.new(etc_avahi_aliases,man,client)
-      update_aliases.do_exec = true
-      update_aliases.execute
-      
+      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
+      if VMC::Cli::Config.trace
+        display "Pending updates"
+        display JSON.pretty_generate(configurer.updates_pending)
+      end
+      configurer.execute
     end
     
   end

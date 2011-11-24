@@ -1,5 +1,4 @@
 # VMC Knife
-
 Extensions for vmc: the VMware Cloud CLI; the command line interface to VMware's Application Platform
 
 MIT license
@@ -12,4 +11,4 @@ Run the deployment file via a web-interface.
     prepare a vmc deployment file.
     vmc_knife vmc_deployment_file.json
 
-    
+

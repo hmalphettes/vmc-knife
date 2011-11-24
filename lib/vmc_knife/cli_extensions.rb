@@ -54,15 +54,31 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knife, :configure_etc_avahi_aliases, @args.size) # too many
       end
     when 'configure-applications'
-      usage('vmc_knife configure-application [<recipe-name>]')
+      usage('vmc_knife configure-applications [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
-        set_cmd(:knife, :configure_applications, @args.size)
+        set_cmd(:knifeapps, :configure_applications, @args.size)
       else
-        set_cmd(:knife, :configure_applications, @args.size) # too many
+        set_cmd(:knifeapps, :configure_applications, @args.size) # too many
+      end
+    when 'configure-services'
+      usage('vmc_knife configure-services [<services_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :configure_services, @args.size)
+      else
+        set_cmd(:knifeapps, :configure_services, @args.size) # too many
+      end
+    when 'configure-recipes'
+      usage('vmc_knife configure-recipes [<recipes_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :configure_recipes, @args.size)
+      else
+        set_cmd(:knifeapps, :configure_recipes, @args.size) # too many
       end
     when 'help'
-      display "vmc_knife expand-manifest|login|diff|update|configure|configure-applications|configure-services|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|diff|update|configure|configure-recipes|configure-applications|configure-services|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
     else
       super
     end
