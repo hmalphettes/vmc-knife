@@ -499,7 +499,8 @@ module VMC
           pid = cc_yml['pid']
           if pid!=nil && File.exists?(pid)
             display "Restarting the reconfigured cloud_controller"
-            #assuming that the vcap symlink is in place.
+            #assuming that the vcap symlink is in place. maker sure the aliases
+            # will be resolved.
             `shopt -s expand_aliases; vcap restart cloud_controller`
           end
         end
@@ -512,9 +513,10 @@ module VMC
     # This is really a server-side feature.
     # Replace the 127.0.0.1 localhost #{old_uri} with the new uri
     class VCAPUpdateEtcHosts
-      def initialize(uri, etc_hosts_path="/etc/hosts")
+      def initialize(uri, etc_hosts_path=nil)
         @config = etc_hosts_path
         @uri = uri
+        @uri ||="/etc/hosts"
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
       def update_pending()
@@ -554,10 +556,11 @@ module VMC
     # use vmc apps to read the uris of each app and also the manifest.
     class VCAPUpdateAvahiAliases
       attr_accessor :do_exec
-      def initialize(avahi_aliases_path='/etc/avahi/aliases', manifest_path=nil,client=nil)
+      def initialize(avahi_aliases_path=nil, manifest_path=nil,client=nil)
         @manifest_path = manifest_path
         @client = client
         @config = avahi_aliases_path
+        @config ||= '/etc/avahi/aliases'
       end
       def apps_uris()
         return @apps_uris unless @apps_uris.nil?
