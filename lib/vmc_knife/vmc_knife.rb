@@ -567,7 +567,7 @@ module VMC
         uris = Array.new
         return uris unless @client
         apps = @client.apps
-        uris << URI.parse(client.target).host
+        uris << URI.parse(@client.target).host
         apps.each do |app|
           app[:uris].each do |uri|
             uris << uri
