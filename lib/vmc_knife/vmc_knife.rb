@@ -32,7 +32,8 @@ module VMC
       def target()
         @wrapped['target']
       end
-      def recipes(regexp=/.*/)
+      def recipes(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['recipes'].each do |recipe|
           res << Recipe.new(self, recipe) if (regexp =~ recipe['name'])
@@ -64,7 +65,8 @@ module VMC
       def application(name)
         Application.new @root, @wrapped['applications'][name], name
       end
-      def applications(regexp=/.*/)
+      def applications(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['applications'].each_pair do |name,application|
           res << Application.new(@root, application, name) if regexp =~ name
@@ -76,7 +78,8 @@ module VMC
       def data_service(name)
         DataService.new @root, @wrapped['data_services'][name], name
       end
-      def data_services(regexp=/.*/)
+      def data_services(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['data_services'].each_pair do |name,service|
           res << DataService.new(@root, service, name) if regexp =~ name
@@ -201,8 +204,8 @@ module VMC
         @applications = Array.new
         @data_services = Array.new
         @recipes.each do |recipe|
-          @applications.push recipe.applications(application_sel)
-          @data_services.push recipe.data_services(service_sel)
+          @applications = @applications + recipe.applications(application_sel)
+          @data_services = @data_services + recipe.data_services(service_sel)
         end
       end
       # Only for testing: inject json
@@ -229,8 +232,8 @@ module VMC
         end
         @applications.each do |application|
            unless @application_updaters[application.name]
-             application_updater = ApplicationManifestApplier.new data_service, @client, @current_services, @current_services_info
-             @application_updaters[application.name] = application
+             application_updater = ApplicationManifestApplier.new application, @client
+             @application_updaters[application.name] = application_updater
              updates = application_updater.updates_pending
              applications_updates[application.name] = updates if updates
            end
@@ -238,14 +241,15 @@ module VMC
         res['services'] = data_services_updates unless data_services_updates.empty?
         res['applications'] = applications_updates unless applications_updates.empty?
         @updates_report = res
+        puts JSON.pretty_generate @updates_report
         @updates_report
       end
       def execute()
-        return updates_pending.empty?
-        @data_service_updaters.each do |data_service_updater|
+        return if updates_pending.empty?
+        @data_service_updaters.each do |name,data_service_updater|
           data_service_updater.execute
         end
-        @application_updaters.each do |application_updater|
+        @application_updaters.each do |name,application_updater|
           application_updater.execute
         end
       end
@@ -297,21 +301,22 @@ module VMC
       # If the service vendor ( = type) is not provided by this vcap install
       # An exception is raised.
       def service_hash()
-        vendor = @data_service_json['vendor']
+        searched_vendor = @data_service_json['vendor']
+        current()
         # in the vmc.rb code there is a comment that says 'FIXME!'
         @current_services_info.each do |service_type, value|
           value.each do |vendor, version|
             version.each do |version_str, service_descr|
-              if service == service_descr[:vendor]
+              if searched_vendor == service_descr[:vendor]
                 return {
-                  :type => service_descr[:type], :tier => 'free',
-                  :vendor => service, :version => version_str
+                  "type" => service_descr[:type], "tier" => 'free',
+                  "vendor" => searched_vendor, "version" => version_str
                 }
               end
             end
           end
         end
-        raise "vcap does not provide a data-service which vendor is #{name}" if sh.nil?
+        raise "vcap does not provide a data-service which vendor is #{searched_vendor}"
       end
       
       
@@ -336,10 +341,19 @@ module VMC
         @current_name ||= @application_json['name']
       end
       
+      def safe_app_info(name)
+        begin
+          return @client.app_info(name)
+        rescue VMC::Client::NotFound
+          #expected
+          return
+        end
+      end
+      
       def current()
         return @current unless @current.nil?
-        @current = @client.app_info(@current_name)
-        @current ||= @client.app_info(@application_json['name']) # in case the rename occurred already.
+        @current = safe_app_info(@current_name)
+        @current ||= safe_app_info(@application_json['name']) # in case the rename occurred already.
         @current ||= Hash.new # that would be a new app.
       end
       
@@ -364,7 +378,7 @@ module VMC
       # take the manifest defined in the saas recipe
       # merge it with the current manifest of the application.
       def updated_manifest()
-        new_app_manifest = JSON.parse(@current.to_json) # a deep clone.
+        new_app_manifest = JSON.parse(current.to_json) # a deep clone.
         #now let's update everything.
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
         new_app_manifest['name'] = @application_json['name']
@@ -397,7 +411,7 @@ module VMC
       end
       
       def update_name_pending()
-        if @current['name'].nil?
+        if current['name'].nil?
           return "Create #{@application_json['name']}"
         end
         if @application_json['name'] != @current['name']
