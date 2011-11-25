@@ -17,7 +17,7 @@ module VMC
           break unless expand_data(data,data)
           passes += 1
         end
-        puts data.to_json
+        puts data.to_json unless passes < 100
         raise "More than 100 passes evaluating the ruby template in the json file" unless passes < 100
         #puts "got data #{data.to_json}"
         data
