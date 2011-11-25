@@ -106,6 +106,9 @@ module VMC
       def name()
         @wrapped['name']
       end
+      def vendor()
+        @wrapped['vendor']
+      end
       
       # Returns a vcap manifest that can be used
       # to create a new data-service to vcap's cloud_controller.
@@ -245,8 +248,10 @@ module VMC
         @updates_report
       end
       def execute()
+        puts "updates empty? #{updates_pending.empty?}"
         return if updates_pending.empty?
         @data_service_updaters.each do |name,data_service_updater|
+          puts "updating service #{name}"
           data_service_updater.execute
         end
         @application_updaters.each do |name,application_updater|
@@ -293,8 +298,10 @@ module VMC
         return "Create data-service #{name} vendor #{vendor}" if current().empty?
       end
       def execute()
-        return if updates_pending
+        puts "updates_pending #{updates_pending}"
+        return unless updates_pending
         service_man = service_hash()
+        puts "Calling client.create_service #{@data_service_json['vendor']}, #{@data_service_json['name']}"
         client.create_service @data_service_json['vendor'], @data_service_json['name']
       end
       # Returns the service manifest for the vendor.
@@ -365,7 +372,10 @@ module VMC
       def execute()
         diff = updates_pending()
         if diff && diff.size > 0
-          if @current['name'].nil?
+          puts @current.inspect
+          puts @application_json.inspect
+          puts updated_manifest.inspect
+          if @current['name'].nil? && @current[:name].nil?
             client.create_app(@application_json['name'], updated_manifest)
           elsif @current['name'] != @application_json['name']
             # This works for renaming the application too.
@@ -381,7 +391,7 @@ module VMC
         new_app_manifest = JSON.parse(current.to_json) # a deep clone.
         #now let's update everything.
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
-        new_app_manifest['name'] = @application_json['name']
+        new_app_manifest[:name] = @application_json['name']
         new_app_manifest['resources'] = Hash.new if new_app_manifest['resources'].nil?
         new_app_manifest['resources']['memory'] = new_mem unless new_mem.nil?
         unless @application_json['staging'].nil?
@@ -392,6 +402,7 @@ module VMC
         new_app_manifest['uris'] = @application_json['uris'] unless @application_json['uris'].nil?
         new_app_manifest['services'] = @application_json['services'] unless @application_json['services'].nil?
         new_app_manifest['env'] = @application_json['env'] unless @application_json['env'].nil?
+        new_app_manifest
       end
       
       # Returns a json object where we see the differences.
@@ -493,8 +504,27 @@ module VMC
         end
         return res
       end
+      # look for
+      #   cloud_controller_uri: http://api.intalio.me
+      # and replace it with the new one.
+      def update_gateway(config)
+        changed = false
+        lines = IO.readlines config
+        File.open(config, "w") do |file|
+          lines.each do |s|
+            if /^[\s]*cloud_controller_uri:/ =~ s
+              changed = true unless /#{@uri}[\s]*$/ =~ s
+              file.puts "cloud_controller_uri: http://#{@uri}\n"
+            else
+              file.puts s
+            end
+          end
+        end
+        changed
+      end
       def execute()
         @changed = false
+        @changed_gateways = Array.new
         # look for the line that starts with external_uri: 
         # replace it with the new uri if indeed there was a change.
         lines = IO.readlines @config
@@ -509,6 +539,15 @@ module VMC
           end
         end
         if @changed
+          #update the gateways too.
+          @changed_gateways = Array.new
+          yaml_files = Dir.glob File.join(File.dirname(@config), "*_gateway.yml")
+          yaml_files.each do |path|
+            if update_gateway(path)
+              gateway = File.basename(path, '.yml')
+              @changed_gateways << gateway
+            end
+          end
           cc_yml = File.open( @config ) { |yf| YAML::load( yf ) }
           pid = cc_yml['pid']
           if pid!=nil && File.exists?(pid)
@@ -518,6 +557,9 @@ module VMC
             #`shopt -s expand_aliases; vcap restart cloud_controller`
             #TODO: something that looks nicer?
             system ". ~/.bashrc;\n vcap restart cloud_controller"
+            @changed_gateways.each do |gateway|
+              system ". ~/.bashrc;\n vcap restart #{gateway}"
+            end
           end
         end
       end
