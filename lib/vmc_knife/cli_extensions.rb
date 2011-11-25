@@ -96,8 +96,40 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :configure_recipes, @args.size) # too many
       end
+    when 'upload-applications'
+      usage('vmc_knife upload-applications [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :upload_applications, @args.size)
+      else
+        set_cmd(:knifeapps, :upload_applications, @args.size) # too many
+      end
+    when 'start-applications'
+      usage('vmc_knife start-applications [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :start_applications, @args.size)
+      else
+        set_cmd(:knifeapps, :start_applications, @args.size) # too many
+      end
+    when 'stop-applications'
+      usage('vmc_knife stop-applications [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :stop_applications, @args.size)
+      else
+        set_cmd(:knifeapps, :stop_applications, @args.size) # too many
+      end
+    when 'restart-applications'
+      usage('vmc_knife restart-applications [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :restart_applications, @args.size)
+      else
+        set_cmd(:knifeapps, :restart_applications, @args.size) # too many
+      end
     when 'help'
-      display "vmc_knife expand-manifest|login|diff|update|configure-all|configure-recipes|configure-applications|configure-services|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-applications|upload-applications|configure|configure-recipes|configure-applications|configure-services|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
     else
       super
     end

@@ -61,10 +61,8 @@ module VMC::Cli::Command
     end
     
     def configure_all(manifest_file_path_or_uri=nil)
-      display "Login ..."
-      VMC::Cli::Command::Knifemisc.new(@options).login(manifest_file_path_or_uri)
-      display "Configure_etc_avahi_aliases ..."
-      configure_etc_avahi_aliases(nil,manifest_file_path_or_uri)
+      display "Stop applications ..."
+      VMC::Cli::Command::Knifeapps.new(@options).stop_applications(nil,manifest_file_path_or_uri)
       display "Configure_cloud_controller ..."
       configure_cloud_controller(nil,manifest_file_path_or_uri)
       display "Configure_etc_hosts ..."
@@ -73,6 +71,10 @@ module VMC::Cli::Command
       VMC::Cli::Command::Knifemisc.new(@options).login(manifest_file_path_or_uri)
       display "Configure_applications ..."
       VMC::Cli::Command::Knifeapps.new(@options).configure_applications(nil,manifest_file_path_or_uri)
+      display "Configure_etc_avahi_aliases ..."
+      configure_etc_avahi_aliases(nil,manifest_file_path_or_uri)
+      display "Start applications ..."
+      VMC::Cli::Command::Knifeapps.new(@options).start_applications(nil,manifest_file_path_or_uri)
     end
 
     private
@@ -157,6 +159,26 @@ module VMC::Cli::Command
         display JSON.pretty_generate(configurer.updates_pending)
       end
       configurer.execute
+    end
+    
+    def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:upload,nil,nil,app_names_regexp,manifest_file_path)
+    end
+    def start_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:start,nil,nil,app_names_regexp,manifest_file_path)
+    end
+    def stop_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:stop,nil,nil,app_names_regexp,manifest_file_path)
+    end
+    def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:restart,nil,nil,app_names_regexp,manifest_file_path)
+    end
+    
+    def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
+      man = load_manifest(manifest_file_path)
+      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
+      method_object = configurer.method(method_sym_name)
+      method_object.call
     end
     
   end

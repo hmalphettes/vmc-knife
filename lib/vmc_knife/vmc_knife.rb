@@ -247,11 +247,31 @@ module VMC
         puts JSON.pretty_generate @updates_report
         @updates_report
       end
+      def upload()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.upload
+        end
+      end
+      def restart()
+        stop()
+        start()
+      end
+      def stop()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.stop
+        end
+      end
+      def start()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.start
+        end
+      end
       def execute()
-        puts "updates empty? #{updates_pending.empty?}"
         return if updates_pending.empty?
         @data_service_updaters.each do |name,data_service_updater|
-          puts "updating service #{name}"
           data_service_updater.execute
         end
         @application_updaters.each do |name,application_updater|
@@ -277,7 +297,7 @@ module VMC
         @current_services ||= @client.services
         @current_services_info ||= @client.services_info
         @current_services.each do |service|
-          if service['name'] == @data_service_json['name']
+          if service[:name] == @data_service_json['name']
             @current = service
             break
           end
@@ -298,7 +318,6 @@ module VMC
         return "Create data-service #{name} vendor #{vendor}" if current().empty?
       end
       def execute()
-        puts "updates_pending #{updates_pending}"
         return unless updates_pending
         service_man = service_hash()
         puts "Calling client.create_service #{@data_service_json['vendor']}, #{@data_service_json['name']}"
@@ -372,16 +391,49 @@ module VMC
       def execute()
         diff = updates_pending()
         if diff && diff.size > 0
-          puts @current.inspect
-          puts @application_json.inspect
-          puts updated_manifest.inspect
           if @current['name'].nil? && @current[:name].nil?
-            client.create_app(@application_json['name'], updated_manifest)
+            puts "Creating #{@application_json['name']} with #{updated_manifest.inspect}"
+            @client.create_app(@application_json['name'], updated_manifest)
           elsif @current['name'] != @application_json['name']
             # This works for renaming the application too.
-            client.update_app(@application_json['name'], updated_manifest)
+            puts "Updating #{@application_json['name']} with #{updated_manifest.inspect}"
+            @client.update_app(@application_json['name'], updated_manifest)
           end
         end
+      end
+      
+      def upload()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return unless @application_json['repository']
+        url = @application_json['repository']['url']
+        Dir.chdir(ENV['HOME']) do
+          FileUtils.mkdir_p "vmc_knife_downloads/#{@application_json['name']}"
+          Dir.chdir("vmc_knife_downloads/#{@application_json['name']}") do
+            if Dir.entries(Dir.pwd).size == 2
+              puts "Dir.entries(#{Dir.pwd}).size #{Dir.entries(Dir.pwd).size}"
+              #empty directory.
+              `wget --output-document=_download_.zip #{url}`
+              raise "Unable to download #{url}" unless $? == 0
+              `unzip _download_.zip`
+              `rm _download_.zip`
+            end
+            VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
+          end
+        end
+      end
+      
+      def start()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current[:state] == 'STARTED'
+        current[:state] = 'STARTED'
+        client.update_app(@application_json['name'], current())
+      end
+      
+      def stop()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current[:state] == 'STOPPED'
+        current[:state] = 'STOPPED'
+        client.update_app(@application_json['name'], current())
       end
       
       # Generate the updated application manifest:
@@ -397,6 +449,7 @@ module VMC
         unless @application_json['staging'].nil?
           new_app_manifest['staging'] = Hash.new if new_app_manifest['staging'].nil?
           new_app_manifest['staging']['model'] = @application_json['staging']['model'] unless @application_json['staging']['model'].nil?
+          #new_app_manifest['staging']['framework'] = new_app_manifest['staging']['model']
           new_app_manifest['staging']['stack'] = @application_json['staging']['stack'] unless @application_json['staging']['stack'].nil?
         end
         new_app_manifest['uris'] = @application_json['uris'] unless @application_json['uris'].nil?

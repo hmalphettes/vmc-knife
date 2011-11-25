@@ -12,11 +12,13 @@ module VMC
         data = JSON.parse File.open(file_path).read
         #puts "got data #{data.to_json}"
         passes = 0
-        while passes < 10
+        while passes < 100
+          #puts "pass #{passes}"
           break unless expand_data(data,data)
           passes += 1
         end
-        raise "More than 10 passes evaluating the ruby template in the json file" unless passes < 10
+        puts data.to_json
+        raise "More than 100 passes evaluating the ruby template in the json file" unless passes < 100
         #puts "got data #{data.to_json}"
         data
       end
@@ -25,6 +27,7 @@ module VMC
       # Eval the values that are strings and contain a #{}
       # Does not do it recursively
       # data The root data passed as 'this' in the binding to the eval function
+      # @return true if there was a change.
       def self.expand_data(data,current)
         at_least_one_eval = false
         if current.kind_of? Hash
@@ -70,6 +73,7 @@ module VMC
       # however if it is purely a ruby script ("#{ruby here}" ) we unwrap it
       # to avoid casting the result into a string.
       def self.eval_v(v,data,current)
+        #puts "evalling #{v}"
         if /^\#{([^}]*)}$/ =~ v
           val = $1
         else
