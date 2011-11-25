@@ -59,6 +59,21 @@ module VMC::Cli::Command
       update_aliases.do_exec = true
       update_aliases.execute
     end
+    
+    def configure_all(manifest_file_path_or_uri=nil)
+      display "Login ..."
+      VMC::Cli::Command::Knifemisc.new(@options).login(manifest_file_path_or_uri)
+      display "Configure_etc_avahi_aliases ..."
+      configure_etc_avahi_aliases(nil,manifest_file_path_or_uri)
+      display "Configure_cloud_controller ..."
+      configure_cloud_controller(nil,manifest_file_path_or_uri)
+      display "Configure_etc_hosts ..."
+      configure_etc_hosts(nil,manifest_file_path_or_uri)
+      display "Login again ..."
+      VMC::Cli::Command::Knifemisc.new(@options).login(manifest_file_path_or_uri)
+      display "Configure_applications ..."
+      VMC::Cli::Command::Knifeapps.new(@options).configure_applications(nil,manifest_file_path_or_uri)
+    end
 
     private
     def __update(manifest_file_path_or_uri,config,_class,msg_label)
@@ -99,7 +114,6 @@ module VMC::Cli::Command
       @options[:password] = password if password
       
       tries ||= 0
-      
       # login_and_save_token:
       token = client.login(email, password)
       VMC::Cli::Config.store_token(token)
