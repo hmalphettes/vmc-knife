@@ -32,7 +32,8 @@ module VMC
       def target()
         @wrapped['target']
       end
-      def recipes(regexp=/.*/)
+      def recipes(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['recipes'].each do |recipe|
           res << Recipe.new(self, recipe) if (regexp =~ recipe['name'])
@@ -64,7 +65,8 @@ module VMC
       def application(name)
         Application.new @root, @wrapped['applications'][name], name
       end
-      def applications(regexp=/.*/)
+      def applications(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['applications'].each_pair do |name,application|
           res << Application.new(@root, application, name) if regexp =~ name
@@ -76,7 +78,8 @@ module VMC
       def data_service(name)
         DataService.new @root, @wrapped['data_services'][name], name
       end
-      def data_services(regexp=/.*/)
+      def data_services(regexp=nil)
+        regexp||=/.*/
         res = Array.new
         @wrapped['data_services'].each_pair do |name,service|
           res << DataService.new(@root, service, name) if regexp =~ name
@@ -102,6 +105,9 @@ module VMC
       # returns the name of the service for cloudfoundry
       def name()
         @wrapped['name']
+      end
+      def vendor()
+        @wrapped['vendor']
       end
       
       # Returns a vcap manifest that can be used
@@ -201,8 +207,8 @@ module VMC
         @applications = Array.new
         @data_services = Array.new
         @recipes.each do |recipe|
-          @applications.push recipe.applications(application_sel)
-          @data_services.push recipe.data_services(service_sel)
+          @applications = @applications + recipe.applications(application_sel)
+          @data_services = @data_services + recipe.data_services(service_sel)
         end
       end
       # Only for testing: inject json
@@ -229,8 +235,8 @@ module VMC
         end
         @applications.each do |application|
            unless @application_updaters[application.name]
-             application_updater = ApplicationManifestApplier.new data_service, @client, @current_services, @current_services_info
-             @application_updaters[application.name] = application
+             application_updater = ApplicationManifestApplier.new application, @client
+             @application_updaters[application.name] = application_updater
              updates = application_updater.updates_pending
              applications_updates[application.name] = updates if updates
            end
@@ -238,14 +244,37 @@ module VMC
         res['services'] = data_services_updates unless data_services_updates.empty?
         res['applications'] = applications_updates unless applications_updates.empty?
         @updates_report = res
+        puts JSON.pretty_generate @updates_report
         @updates_report
       end
+      def upload()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.upload
+        end
+      end
+      def restart()
+        stop()
+        start()
+      end
+      def stop()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.stop
+        end
+      end
+      def start()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.start
+        end
+      end
       def execute()
-        return updates_pending.empty?
-        @data_service_updaters.each do |data_service_updater|
+        return if updates_pending.empty?
+        @data_service_updaters.each do |name,data_service_updater|
           data_service_updater.execute
         end
-        @application_updaters.each do |application_updater|
+        @application_updaters.each do |name,application_updater|
           application_updater.execute
         end
       end
@@ -268,7 +297,7 @@ module VMC
         @current_services ||= @client.services
         @current_services_info ||= @client.services_info
         @current_services.each do |service|
-          if service['name'] == @data_service_json['name']
+          if service[:name] == @data_service_json['name']
             @current = service
             break
           end
@@ -289,29 +318,31 @@ module VMC
         return "Create data-service #{name} vendor #{vendor}" if current().empty?
       end
       def execute()
-        return if updates_pending
+        return unless updates_pending
         service_man = service_hash()
+        puts "Calling client.create_service #{@data_service_json['vendor']}, #{@data_service_json['name']}"
         client.create_service @data_service_json['vendor'], @data_service_json['name']
       end
       # Returns the service manifest for the vendor.
       # If the service vendor ( = type) is not provided by this vcap install
       # An exception is raised.
       def service_hash()
-        vendor = @data_service_json['vendor']
+        searched_vendor = @data_service_json['vendor']
+        current()
         # in the vmc.rb code there is a comment that says 'FIXME!'
         @current_services_info.each do |service_type, value|
           value.each do |vendor, version|
             version.each do |version_str, service_descr|
-              if service == service_descr[:vendor]
+              if searched_vendor == service_descr[:vendor]
                 return {
-                  :type => service_descr[:type], :tier => 'free',
-                  :vendor => service, :version => version_str
+                  "type" => service_descr[:type], "tier" => 'free',
+                  "vendor" => searched_vendor, "version" => version_str
                 }
               end
             end
           end
         end
-        raise "vcap does not provide a data-service which vendor is #{name}" if sh.nil?
+        raise "vcap does not provide a data-service which vendor is #{searched_vendor}"
       end
       
       
@@ -336,10 +367,19 @@ module VMC
         @current_name ||= @application_json['name']
       end
       
+      def safe_app_info(name)
+        begin
+          return @client.app_info(name)
+        rescue VMC::Client::NotFound
+          #expected
+          return
+        end
+      end
+      
       def current()
         return @current unless @current.nil?
-        @current = @client.app_info(@current_name)
-        @current ||= @client.app_info(@application_json['name']) # in case the rename occurred already.
+        @current = safe_app_info(@current_name)
+        @current ||= safe_app_info(@application_json['name']) # in case the rename occurred already.
         @current ||= Hash.new # that would be a new app.
       end
       
@@ -351,33 +391,71 @@ module VMC
       def execute()
         diff = updates_pending()
         if diff && diff.size > 0
-          if @current['name'].nil?
-            client.create_app(@application_json['name'], updated_manifest)
+          if @current['name'].nil? && @current[:name].nil?
+            puts "Creating #{@application_json['name']} with #{updated_manifest.inspect}"
+            @client.create_app(@application_json['name'], updated_manifest)
           elsif @current['name'] != @application_json['name']
             # This works for renaming the application too.
-            client.update_app(@application_json['name'], updated_manifest)
+            puts "Updating #{@application_json['name']} with #{updated_manifest.inspect}"
+            @client.update_app(@application_json['name'], updated_manifest)
           end
         end
+      end
+      
+      def upload()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return unless @application_json['repository']
+        url = @application_json['repository']['url']
+        Dir.chdir(ENV['HOME']) do
+          FileUtils.mkdir_p "vmc_knife_downloads/#{@application_json['name']}"
+          Dir.chdir("vmc_knife_downloads/#{@application_json['name']}") do
+            if Dir.entries(Dir.pwd).size == 2
+              puts "Dir.entries(#{Dir.pwd}).size #{Dir.entries(Dir.pwd).size}"
+              #empty directory.
+              `wget --output-document=_download_.zip #{url}`
+              raise "Unable to download #{url}" unless $? == 0
+              `unzip _download_.zip`
+              `rm _download_.zip`
+            end
+            VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
+          end
+        end
+      end
+      
+      def start()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current[:state] == 'STARTED'
+        current[:state] = 'STARTED'
+        client.update_app(@application_json['name'], current())
+      end
+      
+      def stop()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current[:state] == 'STOPPED'
+        current[:state] = 'STOPPED'
+        client.update_app(@application_json['name'], current())
       end
       
       # Generate the updated application manifest:
       # take the manifest defined in the saas recipe
       # merge it with the current manifest of the application.
       def updated_manifest()
-        new_app_manifest = JSON.parse(@current.to_json) # a deep clone.
+        new_app_manifest = JSON.parse(current.to_json) # a deep clone.
         #now let's update everything.
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
-        new_app_manifest['name'] = @application_json['name']
+        new_app_manifest[:name] = @application_json['name']
         new_app_manifest['resources'] = Hash.new if new_app_manifest['resources'].nil?
         new_app_manifest['resources']['memory'] = new_mem unless new_mem.nil?
         unless @application_json['staging'].nil?
           new_app_manifest['staging'] = Hash.new if new_app_manifest['staging'].nil?
           new_app_manifest['staging']['model'] = @application_json['staging']['model'] unless @application_json['staging']['model'].nil?
+          #new_app_manifest['staging']['framework'] = new_app_manifest['staging']['model']
           new_app_manifest['staging']['stack'] = @application_json['staging']['stack'] unless @application_json['staging']['stack'].nil?
         end
         new_app_manifest['uris'] = @application_json['uris'] unless @application_json['uris'].nil?
         new_app_manifest['services'] = @application_json['services'] unless @application_json['services'].nil?
         new_app_manifest['env'] = @application_json['env'] unless @application_json['env'].nil?
+        new_app_manifest
       end
       
       # Returns a json object where we see the differences.
@@ -397,7 +475,7 @@ module VMC
       end
       
       def update_name_pending()
-        if @current['name'].nil?
+        if current['name'].nil?
           return "Create #{@application_json['name']}"
         end
         if @application_json['name'] != @current['name']
@@ -462,8 +540,9 @@ module VMC
     
     # This is really a server-side vcap admin feature.
     class VCAPUpdateCloudControllerConfig
-      def initialize(uri, cloud_controller_config="#{ENV['HOME']}/cloudfoundry/config/cloud_controller.yml")
+      def initialize(uri, cloud_controller_config=nil)
         @config = cloud_controller_config
+        @config ||="#{ENV['HOME']}/cloudfoundry/config/cloud_controller.yml"
         @uri = uri
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
@@ -478,8 +557,27 @@ module VMC
         end
         return res
       end
+      # look for
+      #   cloud_controller_uri: http://api.intalio.me
+      # and replace it with the new one.
+      def update_gateway(config)
+        changed = false
+        lines = IO.readlines config
+        File.open(config, "w") do |file|
+          lines.each do |s|
+            if /^[\s]*cloud_controller_uri:/ =~ s
+              changed = true unless /#{@uri}[\s]*$/ =~ s
+              file.puts "cloud_controller_uri: http://#{@uri}\n"
+            else
+              file.puts s
+            end
+          end
+        end
+        changed
+      end
       def execute()
         @changed = false
+        @changed_gateways = Array.new
         # look for the line that starts with external_uri: 
         # replace it with the new uri if indeed there was a change.
         lines = IO.readlines @config
@@ -494,12 +592,27 @@ module VMC
           end
         end
         if @changed
+          #update the gateways too.
+          @changed_gateways = Array.new
+          yaml_files = Dir.glob File.join(File.dirname(@config), "*_gateway.yml")
+          yaml_files.each do |path|
+            if update_gateway(path)
+              gateway = File.basename(path, '.yml')
+              @changed_gateways << gateway
+            end
+          end
           cc_yml = File.open( @config ) { |yf| YAML::load( yf ) }
           pid = cc_yml['pid']
           if pid!=nil && File.exists?(pid)
             display "Restarting the reconfigured cloud_controller"
-            #assuming that the vcap symlink is in place.
-            `vcap restart cloud_controller`
+            #assuming that the vcap symlink is in place. maker sure the aliases
+            # will be resolved.
+            #`shopt -s expand_aliases; vcap restart cloud_controller`
+            #TODO: something that looks nicer?
+            system ". ~/.bashrc;\n vcap restart cloud_controller"
+            @changed_gateways.each do |gateway|
+              system ". ~/.bashrc;\n vcap restart #{gateway}"
+            end
           end
         end
       end
@@ -511,37 +624,42 @@ module VMC
     # This is really a server-side feature.
     # Replace the 127.0.0.1 localhost #{old_uri} with the new uri
     class VCAPUpdateEtcHosts
-      def initialize(uri, etc_hosts_path="/etc/hosts")
+      def initialize(uri, etc_hosts_path=nil)
         @config = etc_hosts_path
+        @config ||="/etc/hosts"
         @uri = uri
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
       def update_pending()
-        res = false
-        File.open(@config, "r") do |file|
-          file.each_line do |s|
-            if /^[\s]*external_uri:/ =~ s
-              res = true unless /#{@uri}[\s]*$/ =~ s
-            end
-          end
-        end
-        return res
+        #could also use:
+        found_it=`sed -n '/^127\.0\.0\.1[[:space:]]*localhost[[:space:]]*#{@uri}/p' #{@config}`
+        return true unless found_it && found_it.strip.length != 0
+        return false
       end
       def execute()
+        return unless update_pending
         @changed = false
         # look for the line that starts with external_uri: 
         # replace it with the new uri if indeed there was a change.
-        lines = IO.readlines @config
-        File.open(@config, "w") do |file|
-          lines.each do |s|
-            if /^127.0.0.1[\s]+localhost[\s]*/ =~ s
-              @changed = true unless /^127.0.0.1[\s]+localhost[\s]+#{@uri}[\s]*/ =~ s
-              file.puts "127.0.0.1\tlocalhost #{@uri}\n"
-            else
-              file.puts s
+        if true
+          # use sudo.
+          puts "Executing sudo sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}"
+          `sudo sed -i 's/^127\.0\.0\.1[[:space:]]*localhost.*$/127.0.0.1    localhost #{@uri}/g' #{@config}`
+        else
+          lines = IO.readlines @config
+          File.open(@config, "w") do |file|
+            lines.each do |s|
+              if /^127.0.0.1[\s]+localhost[\s]*/ =~ s
+                @changed = true unless /^127.0.0.1[\s]+localhost[\s]+#{@uri}[\s]*/ =~ s
+                file.puts "127.0.0.1\tlocalhost #{@uri}\n"
+              else
+                file.puts s
+              end
             end
           end
         end
+        #Edit the /etc/hostname file: (not a necessity so far).
+        #`sudo hostname #{@uri}`
       end
       def was_changed()
         @changed
@@ -553,20 +671,23 @@ module VMC
     # use vmc apps to read the uris of each app and also the manifest.
     class VCAPUpdateAvahiAliases
       attr_accessor :do_exec
-      def initialize(avahi_aliases_path='/etc/avahi/aliases', manifest_path=nil,client=nil)
+      def initialize(avahi_aliases_path=nil, manifest_path=nil,client=nil)
         @manifest_path = manifest_path
         @client = client
         @config = avahi_aliases_path
+        @config ||= '/etc/avahi/aliases'
       end
       def apps_uris()
         return @apps_uris unless @apps_uris.nil?
         uris = Array.new
         return uris unless @client
         apps = @client.apps
-        uris << URI.parse(client.target).host
+        api_uri = URI.parse(@client.target).host
+        uris << api_uri if /\.local$/ =~ api_uri
         apps.each do |app|
           app[:uris].each do |uri|
-            uris << uri
+            #only publish the uris in the local domain.
+            uris << uri if /\.local$/ =~ uri
           end
         end
         uris.uniq!
@@ -581,7 +702,7 @@ module VMC
         root.recipes.each do |recipe|
           recipe.applications.each do |application|
             application.uris.each do |uri|
-              uris << uri
+              uris << uri if /\.local$/ =~ uri
             end
           end
         end
@@ -610,14 +731,16 @@ module VMC
             file.puts uri + "\n"
           end
         end
-        `sudo avahi-publish-aliases` if @do_exec
+        #configured so that we don't need root privileges on /etc/avahi/aliases:
+        #the backticks don't work; system() works:
+        system('avahi-publish-aliases') if @do_exec
       end
       def update_pending()
         already = already_published_uris()
         length_already = already.length
-        already = already + all_uris()
-        already.uniq!
-        return length_already != already.length
+        allall = already + all_uris()
+        allall.uniq!
+        return length_already != allall.length
       end
     end
     
