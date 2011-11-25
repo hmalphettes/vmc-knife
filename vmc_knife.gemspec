@@ -5,7 +5,7 @@ require 'vmc_knife/version'
 
 spec = Gem::Specification.new do |s|
   s.name = "vmc_knife"
-  s.version = VMC::KNIFE::Cli::VERSION
+  s.version = "0.0.01"
   s.author = "Intalio Pte"
   s.email = "hmalphettes@gmail.com"
   s.homepage = "http://intalio.com"
@@ -18,11 +18,11 @@ spec = Gem::Specification.new do |s|
   s.add_dependency "vmc", "~> 0.3.14.beta4"
 
   s.add_dependency "rest-client", ">= 1.6.1", "< 1.7.0"
-  s.add_development_dependency "rake"
+  #s.add_development_dependency "rake"
   s.add_development_dependency "rspec",   "~> 1.3.0"
   s.add_development_dependency "webmock", "= 1.5.0"
 
   s.bindir  = "bin"
   s.require_path = 'lib'
-  s.files = %w(LICENSE README.md Rakefile) + Dir.glob("{lib}/**/*")
+  s.files = %w(LICENSE README.md) + Dir.glob("{lib}/**/*")
 end
