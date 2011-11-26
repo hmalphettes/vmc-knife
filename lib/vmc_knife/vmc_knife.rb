@@ -253,6 +253,16 @@ module VMC
           application_updater.upload
         end
       end
+      def delete()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.delete
+        end
+        @data_services.each do |data_service|
+          data_service_updater = DataServiceManifestApplier.new data_service, @client, @current_services, @current_services_info
+          data_service_updater.delete
+        end
+      end
       def restart()
         stop()
         start()
@@ -323,6 +333,11 @@ module VMC
         puts "Calling client.create_service #{@data_service_json['vendor']}, #{@data_service_json['name']}"
         client.create_service @data_service_json['vendor'], @data_service_json['name']
       end
+      def delete()
+        raise "The service #{@data_service_json['name']} does not exist." if current().empty?
+        client.delete_service(@data_service_json['name'])
+      end
+
       # Returns the service manifest for the vendor.
       # If the service vendor ( = type) is not provided by this vcap install
       # An exception is raised.
@@ -442,6 +457,11 @@ module VMC
         client.update_app(@application_json['name'], current())
       end
       
+      def delete()
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        client.delete_app(@application_json['name'])
+      end
+
       # Generate the updated application manifest:
       # take the manifest defined in the saas recipe
       # merge it with the current manifest of the application.

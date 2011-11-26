@@ -71,7 +71,7 @@ module VMC::Cli::Command
       change = configure_cloud_controller(nil,manifest_file_path_or_uri)
       display "Configure_etc_hosts ..."
       configure_etc_hosts(nil,manifest_file_path_or_uri)
-      display "Login to the new target url ..."
+      display "Login again ..."
       new_knife = VMC::Cli::Command::Knifemisc.new(@options)
       new_knife.login(manifest_file_path_or_uri)
       # set the new client object to the old command.
@@ -185,6 +185,9 @@ module VMC::Cli::Command
     end
     def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:restart,nil,nil,app_names_regexp,manifest_file_path)
+    end
+    def delete_all(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:delete,nil,nil,app_names_regexp,manifest_file_path)
     end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)

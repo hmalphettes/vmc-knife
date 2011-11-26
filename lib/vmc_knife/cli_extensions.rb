@@ -128,8 +128,16 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :restart_applications, @args.size) # too many
       end
+    when 'delete-all'
+      usage('vmc_knife delete-all [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :delete_all, @args.size)
+      else
+        set_cmd(:knifeapps, :delete_all, @args.size) # too many
+      end
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-applications|upload-applications|configure|configure-recipes|configure-applications|configure-services|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-applications|upload-applications|configure-all|configure-recipes|configure-applications|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
     else
       super
     end
