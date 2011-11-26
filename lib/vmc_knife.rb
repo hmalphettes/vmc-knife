@@ -16,8 +16,7 @@ end
 
 
 require "#{ROOT_REL}/vmc_knife/json_expander"
-require "#{ROOT_REL}/vmc_knife/json_diff"
+require "#{ROOT_REL}/vmc_knife/vmc_helper"
 require "#{ROOT_REL}/vmc_knife/vmc_knife"
 
 require "#{ROOT_REL}/vmc_knife/cli_extensions"
-

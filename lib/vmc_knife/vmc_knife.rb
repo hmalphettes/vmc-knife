@@ -414,7 +414,13 @@ module VMC
               #empty directory.
               `wget --output-document=_download_.zip #{url}`
               raise "Unable to download #{url}" unless $? == 0
-              `unzip _download_.zip`
+              if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
+                `tar zxvf _download_.zip`
+              elsif /\.tar$/ =~ url
+                `tar xvf _download_.zip`
+              else
+                `unzip _download_.zip`
+              end
               `rm _download_.zip`
             end
             VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)

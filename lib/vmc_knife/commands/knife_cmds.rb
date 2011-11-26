@@ -61,20 +61,27 @@ module VMC::Cli::Command
     end
     
     def configure_all(manifest_file_path_or_uri=nil)
-      display "Stop applications ..."
-      VMC::Cli::Command::Knifeapps.new(@options).stop_applications(nil,manifest_file_path_or_uri)
+      begin
+        display "Stop applications ..."
+        VMC::Cli::Command::Knifeapps.new(@options).stop_applications(nil,manifest_file_path_or_uri)
+      rescue
+        #nevermind. sometimes a wrong config we can't login and we can't stop the apps.
+      end
       display "Configure_cloud_controller ..."
-      configure_cloud_controller(nil,manifest_file_path_or_uri)
+      change = configure_cloud_controller(nil,manifest_file_path_or_uri)
       display "Configure_etc_hosts ..."
       configure_etc_hosts(nil,manifest_file_path_or_uri)
-      display "Login again ..."
-      VMC::Cli::Command::Knifemisc.new(@options).login(manifest_file_path_or_uri)
+      display "Login to the new target url ..."
+      new_knife = VMC::Cli::Command::Knifemisc.new(@options)
+      new_knife.login(manifest_file_path_or_uri)
+      # set the new client object to the old command.
+      @client = new_knife.client
       display "Configure_applications ..."
       VMC::Cli::Command::Knifeapps.new(@options).configure_applications(nil,manifest_file_path_or_uri)
       display "Configure_etc_avahi_aliases ..."
       configure_etc_avahi_aliases(nil,manifest_file_path_or_uri)
       display "Start applications ..."
-      VMC::Cli::Command::Knifeapps.new(@options).start_applications(nil,manifest_file_path_or_uri)
+      VMC::Cli::Command::Knifeapps.new(@options).restart_applications(nil,manifest_file_path_or_uri)
     end
 
     private
@@ -95,6 +102,9 @@ module VMC::Cli::Command
       if update_cc.update_pending()
         display "Configuring #{msg_label} with uri: #{uri}" if VMC::Cli::Config.trace
         update_cc.execute()
+        true
+      else
+        false
       end
     end
 
@@ -108,6 +118,7 @@ module VMC::Cli::Command
       man  = load_manifest(manifest_file_path)
       target_url = man['target']
       raise "No target defined in the manifest #{@manifest_path}" if target_url.nil? 
+      puts "set_target #{target_url}"
       set_target(target_url)
       
       email = man['email']
@@ -117,6 +128,8 @@ module VMC::Cli::Command
       
       tries ||= 0
       # login_and_save_token:
+      
+      puts "login with #{email} #{password}"
       token = client.login(email, password)
       VMC::Cli::Config.store_token(token)
       
