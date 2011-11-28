@@ -650,11 +650,17 @@ module VMC
     # This is really a server-side feature.
     # Replace the 127.0.0.1 localhost #{old_uri} with the new uri
     class VCAPUpdateEtcHosts
-      def initialize(uri, etc_hosts_path=nil)
+      def initialize(uri, etc_hosts_path=nil,man=nil)
         @config = etc_hosts_path
         @config ||="/etc/hosts"
         @uri = uri
         raise "The config file #{@config} does not exist." unless File.exists? @config
+      end
+      def set_all_uris(uris_arr)
+        uris_arr.push @uri unless @uri.nil?
+        uris_arr.sort!
+        uris_arr.uniq!
+        @uri = uris_arr.join(' ')
       end
       def update_pending()
         #could also use:

@@ -4,6 +4,47 @@ require 'json'
 module VMC
   module KNIFE
     module JSON_EXPANDER
+      
+      # Reads the ip of a given interface and the mask
+      # defaults on eth0 then on wlan0 and then whatever it can find that is not 127.0.0.1
+      def self.ip_auto(interface='eth0')
+        res=`ifconfig | sed -n '/#{interface}/{n;p;}' | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
+        if interface == 'eth0' && (res.nil? || res.strip.empty?)
+          res = VcapUtilities.ip_auto "wlan0"
+          if res.strip.empty?
+            #nevermind fetch the first IP you can find that is not 127.0.0.1
+            res=`ifconfig | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
+          end
+        end
+        res.strip! if res
+        unless res.empty?
+          # gets the Mask
+          line=`ifconfig | grep 'inet addr:#{res}' | awk '{ print $1}' | head -1`
+          puts "parsing ip and mask in line #{line}"
+          mask=`ifconfig | grep 'inet addr:#{res}' | grep -v '127.0.0.1' | cut -d: -f4 | awk '{ print $1}' | head -1`
+          mask.strip!
+          puts "got ip #{res} and mask #{mask}"
+          return [ res, mask ]
+        end
+      end
+    
+      # Derive a seed guaranteed unique on the local network  according to the IP.
+      def self.ip_seed()
+        ip_mask=ip_auto()
+        ip = ip_mask[0]
+        mask = ip_mask[1]
+        ip_segs = ip.split('.')
+        if mask == "255.255.255.0"
+          ip_segs[3]
+        elsif mask == "255.255.0.0"
+          "#{ip_segs[2]}-#{ip_segs[3]}"
+        elsif mask == "255.0.0.0"
+          "#{ip_segs[1]}-#{ip_segs[2]}-#{ip_segs[3]}"
+        else
+          #hum why are we here?
+          "#{ip_segs[0]}-#{ip_segs[1]}-#{ip_segs[2]}-#{ip_segs[3]}"
+        end
+      end
     
       # Loads a json file.
       # Makes up to 10 passes evaluating ruby in the values that contain #{}.
@@ -20,6 +61,7 @@ module VMC
         puts data.to_json unless passes < 100
         raise "More than 100 passes evaluating the ruby template in the json file" unless passes < 100
         #puts "got data #{data.to_json}"
+        
         data
       end
       

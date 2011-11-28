@@ -49,8 +49,29 @@ module VMC::Cli::Command
       __update(manifest_file_path_or_uri,cloud_controller_yml,VMC::KNIFE::VCAPUpdateCloudControllerConfig,"cloud_controller")
     end
     # updates /etc/hosts
-    def configure_etc_hosts(etc_hosts=nil,manifest_file_path_or_uri=nil)
-      __update(manifest_file_path_or_uri,etc_hosts,VMC::KNIFE::VCAPUpdateEtcHosts,"/etc/hosts")
+    def configure_etc_hosts(etc_hosts=nil,manifest_file_path=nil,client=nil)
+      #__update(manifest_file_path_or_uri,etc_hosts,VMC::KNIFE::VCAPUpdateEtcHosts,"/etc/hosts")
+      
+      # this will configure /etc/hosts with the urls of your applications as well as the cloudcontroller.
+      # it is not be necessary if avahi is correctly configured on your VM.
+      unless manifest_file_path.nil?
+        if File.exists? manifest_file_path
+          man = load_manifest(manifest_file_path)
+          uri = man['target']
+        else
+          uri = manifest_file_path
+        end
+      else
+        man = load_manifest(nil)
+        uri = man['target']
+      end
+      update_aliases = VMC::KNIFE::VCAPUpdateAvahiAliases.new(nil,man,client)
+      update_hosts = VMC::KNIFE::VCAPUpdateEtcHosts.new(uri,manifest_file_path,client)
+      update_hosts.set_all_uris(update_aliases.all_uris)
+      if update_hosts.update_pending()
+        display "Configuring /etc/hosts with uri: #{uri}" if VMC::Cli::Config.trace
+        update_hosts.execute()
+      end
     end
     # updates /etc/avahi/aliases
     def configure_etc_avahi_aliases(etc_avahi_aliases=nil,manifest_file_path=nil)
