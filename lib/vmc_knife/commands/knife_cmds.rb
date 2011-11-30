@@ -76,7 +76,7 @@ module VMC::Cli::Command
     # updates /etc/avahi/aliases
     def configure_etc_avahi_aliases(etc_avahi_aliases=nil,manifest_file_path=nil)
       man = load_manifest(manifest_file_path)
-      update_aliases = VMC::KNIFE::VCAPUpdateAvahiAliases.new(etc_avahi_aliases,man,client)
+      update_aliases = VMC::KNIFE::VCAPUpdateAvahiAliases.new(etc_avahi_aliases,man,client,/.*/)
       update_aliases.do_exec = true
       update_aliases.execute
     end

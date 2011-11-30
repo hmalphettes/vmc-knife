@@ -496,28 +496,28 @@ module VMC
         updates['services'] = services if services
         updates['env'] = services if services
         updates['uris'] = uris if uris
-        updates['services'] = services if services
+        updates['memory'] = memory if memory
         updates unless updates.empty?
       end
       
       def update_name_pending()
-        if current['name'].nil?
+        if current[:name].nil?
           return "Create #{@application_json['name']}"
         end
-        if @application_json['name'] != @current['name']
-          return "#{@current['name']} => #{@application_json['name']}"
+        if @application_json['name'] != @current[:name]
+          return "#{@current[:name]} => #{@application_json['name']}"
         end
       end
       def update_memory_pending()
-        old_mem = current['resources']['memory'] unless current['resources'].nil?
+        old_mem = current[:resources][:memory] unless current[:resources].nil?
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
         if old_mem != new_mem
           return "#{old_mem} => #{new_mem}"
         end
       end
       def update_staging_pending()
-        old_model = current['staging']['model'] unless current['staging'].nil?
-        old_stack = current['staging']['stack'] unless current['staging'].nil?
+        old_model = current[:staging][:model] unless current[:staging].nil?
+        old_stack = current[:staging][:stack] unless current[:staging].nil?
         new_model = @application_json['staging']['model'] unless @application_json['staging'].nil?
         new_stack = @application_json['staging']['stack'] unless @application_json['staging'].nil?
         if old_model != new_model
@@ -532,17 +532,17 @@ module VMC
         return { "stack" => stack_change, "model" => model_change }
       end
       def update_services_pending()
-        old_services = current['services']
+        old_services = current[:services]
         new_services = @application_json['services']
         diff_lists(old_services,new_services)
       end
       def update_env_pending()
-        old_services = current['env']
+        old_services = current[:env]
         new_services = @application_json['env']
         diff_lists(old_services,new_services)
       end
       def update_uris_pending()
-        old_services = current['uris']
+        old_services = current[:uris]
         new_services = @application_json['uris']
         diff_lists(old_services,new_services)
       end
@@ -702,12 +702,13 @@ module VMC
     # Regenerates the urls to publish as aliases.
     # use vmc apps to read the uris of each app and also the manifest.
     class VCAPUpdateAvahiAliases
-      attr_accessor :do_exec
-      def initialize(avahi_aliases_path=nil, manifest_path=nil,client=nil)
+      attr_accessor :do_exec, :uri_filter
+      def initialize(avahi_aliases_path=nil, manifest_path=nil,client=nil,uri_filter=nil)
         @manifest_path = manifest_path
         @client = client
         @config = avahi_aliases_path
         @config ||= '/etc/avahi/aliases'
+        @uri_filter = uri_filter||/\.local$/
       end
       def apps_uris()
         return @apps_uris unless @apps_uris.nil?
@@ -715,11 +716,11 @@ module VMC
         return uris unless @client
         apps = @client.apps
         api_uri = URI.parse(@client.target).host
-        uris << api_uri if /\.local$/ =~ api_uri
+        uris << api_uri if @uri_filter =~ api_uri
         apps.each do |app|
           app[:uris].each do |uri|
             #only publish the uris in the local domain.
-            uris << uri if /\.local$/ =~ uri
+            uris << uri if @uri_filter =~ uri
           end
         end
         uris.uniq!
@@ -734,7 +735,7 @@ module VMC
         root.recipes.each do |recipe|
           recipe.applications.each do |application|
             application.uris.each do |uri|
-              uris << uri if /\.local$/ =~ uri
+              uris << uri if @uri_filter =~ uri
             end
           end
         end
