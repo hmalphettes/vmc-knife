@@ -72,8 +72,8 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knife, :configure_etc_avahi_aliases, @args.size) # too many
       end
-    when 'configure-applications'
-      usage('vmc_knife configure-applications [<applications_regexp>]')
+    when 'configure-applications','configure-apps'
+      usage('vmc_knife configure-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :configure_applications, @args.size)
@@ -96,32 +96,32 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :configure_recipes, @args.size) # too many
       end
-    when 'upload-applications'
-      usage('vmc_knife upload-applications [<applications_regexp>]')
+    when 'upload-applications','upload-apps'
+      usage('vmc_knife upload-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :upload_applications, @args.size)
       else
         set_cmd(:knifeapps, :upload_applications, @args.size) # too many
       end
-    when 'start-applications'
-      usage('vmc_knife start-applications [<applications_regexp>]')
+    when 'start-applications','start-apps'
+      usage('vmc_knife start-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :start_applications, @args.size)
       else
         set_cmd(:knifeapps, :start_applications, @args.size) # too many
       end
-    when 'stop-applications'
-      usage('vmc_knife stop-applications [<applications_regexp>]')
+    when 'stop-applications','stop-apps'
+      usage('vmc_knife stop-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :stop_applications, @args.size)
       else
         set_cmd(:knifeapps, :stop_applications, @args.size) # too many
       end
-    when 'restart-applications'
-      usage('vmc_knife restart-applications [<applications_regexp>]')
+    when 'restart-applications','restart-apps'
+      usage('vmc_knife restart-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :restart_applications, @args.size)
@@ -137,7 +137,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :delete_all, @args.size) # too many
       end
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-applications|upload-applications|configure-all|configure-recipes|configure-applications|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
     else
       super
     end
