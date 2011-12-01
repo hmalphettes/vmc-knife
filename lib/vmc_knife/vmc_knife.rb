@@ -502,7 +502,7 @@ module VMC
         updates = Hash.new
         updates['name'] = name if name
         updates['services'] = services if services
-        updates['env'] = services if services
+        updates['env'] = env if env
         updates['uris'] = uris if uris
         updates['memory'] = memory if memory
         updates unless updates.empty?
