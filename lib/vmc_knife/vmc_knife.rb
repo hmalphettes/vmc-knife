@@ -210,6 +210,14 @@ module VMC
           @applications = @applications + recipe.applications(application_sel)
           @data_services = @data_services + recipe.data_services(service_sel)
         end
+        app_names = @applications.collect {|app| app.name }
+        service_names = @data_services.collect {|service| service.name }
+        if app_names.empty? && service_names.empty?
+          puts "No applications and data-services were selected."
+        else
+          puts "Applications selected #{app_names.join(', ')}" unless app_names.empty?
+          puts "Data-services selected #{service_names.join(', ')}" unless service_names.empty?
+        end
       end
       # Only for testing: inject json
       def __set_current(current_services=nil,current_services_info=nil)

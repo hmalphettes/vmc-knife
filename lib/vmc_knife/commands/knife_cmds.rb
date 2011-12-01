@@ -187,6 +187,9 @@ module VMC::Cli::Command
     # @param app_role_names The names of the apps in each recipe; nil: configure all apps found.
     def configure(recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
       man = load_manifest(manifest_file_path)
+      recipes_regexp = as_regexp(recipes_regexp)
+      app_names_regexp = as_regexp(app_names_regexp)
+      service_names_regexp = as_regexp(service_names_regexp)
       configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
       if VMC::Cli::Config.trace
         display "Pending updates"
@@ -196,26 +199,35 @@ module VMC::Cli::Command
     end
     
     def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:upload,nil,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:upload,nil,app_names_regexp,manifest_file_path)
     end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:start,nil,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:start,nil,app_names_regexp,manifest_file_path)
     end
     def stop_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:stop,nil,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:stop,nil,app_names_regexp,manifest_file_path)
     end
     def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:restart,nil,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:restart,nil,app_names_regexp,manifest_file_path)
     end
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:delete,nil,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:delete,nil,app_names_regexp,manifest_file_path)
     end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
       man = load_manifest(manifest_file_path)
+      recipes_regexp = as_regexp(recipes_regexp)
+      app_names_regexp = as_regexp(app_names_regexp)
+      service_names_regexp = as_regexp(service_names_regexp)
       configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
       method_object = configurer.method(method_sym_name)
       method_object.call
+    end
+    
+    def as_regexp(arg)
+      if arg != nil && arg.kind_of?(String) && !arg.strip.empty?
+        Regexp.new(arg)
+      end
     end
     
   end
