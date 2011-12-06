@@ -199,19 +199,22 @@ module VMC::Cli::Command
     end
     
     def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:upload,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:upload,nil,app_names_regexp,nil,manifest_file_path)
     end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:start,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:start,nil,app_names_regexp,nil,manifest_file_path)
     end
     def stop_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:stop,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:stop,nil,app_names_regexp,nil,manifest_file_path)
     end
     def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:restart,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:restart,nil,app_names_regexp,nil,manifest_file_path)
     end
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:delete,nil,app_names_regexp,manifest_file_path)
+      recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
+    end
+    def data_shell(data_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path)
     end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)

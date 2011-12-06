@@ -136,8 +136,16 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :delete_all, @args.size) # too many
       end
+    when 'data-shell'
+      usage('vmc_knife data-shell [<data-service-name>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 2
+        set_cmd(:knifeapps, :data_shell, @args.size)
+      else
+        set_cmd(:knifeapps, :data_shell, @args.size) # too many
+      end
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell [<manifest_path>]"
     else
       super
     end

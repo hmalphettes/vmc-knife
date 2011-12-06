@@ -435,17 +435,38 @@ module VMC
             if Dir.entries(Dir.pwd).size == 2
               puts "Dir.entries(#{Dir.pwd}).size #{Dir.entries(Dir.pwd).size}"
               #empty directory.
-              `wget --output-document=_download_.zip #{url}`
-              raise "Unable to download #{url}" unless $? == 0
-              if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
-                `tar zxvf _download_.zip`
-              elsif /\.tar$/ =~ url
-                `tar xvf _download_.zip`
+              if /\.git$/ =~ url
+                `git clone #{url} --depth 1`
+                branch = @application_json['repository']['branch']
+                if branch
+                  `git checkout #{branch}`
+                else
+                  branch=master
+                end
+                `git pull origin #{branch}`
               else
-                `unzip _download_.zip`
+                wget_args = @application_json['repository']['wget_args']
+                if wget_args.nil?
+                  wget_args_str = ""
+                elsif wget_args.kind_of? Array
+                  wget_args_str = wget_args.join(' ')
+                elsif wget_args.kind_of? String
+                  wget_args_str = wget_args
+                end
+                `wget #{wget_args_str} --output-document=_download_.zip #{url}`
+                raise "Unable to download #{url}" unless $? == 0
+                if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
+                  `tar zxvf _download_.zip`
+                elsif /\.tar$/ =~ url
+                  `tar xvf _download_.zip`
+                else
+                  `unzip _download_.zip`
+                end
+                `rm _download_.zip`
               end
-              `rm _download_.zip`
             end
+            Dir.chdir(@application_json['repository']['sub_dir']) if @application_json['repository']['sub_dir']
+            `rm -rf .git` if File.exists? ".git"
             VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
           end
         end
