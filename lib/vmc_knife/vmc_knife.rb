@@ -197,12 +197,13 @@ module VMC
     end
     
     class RecipesConfigurationApplier
-      attr_accessor :root, :client, :applications, :recipes, :data_services
+      attr_accessor :root, :client, :applications, :recipes, :data_services, :opts
       # Select the applications and data-services to configure according to the values
       # in the SaaS manifest. When the selector is nil all of them are selected.
-      def initialize(manifest, client, recipe_sel=nil, application_sel=nil, service_sel=nil)
+      def initialize(manifest, client, recipe_sel=nil, application_sel=nil, service_sel=nil, opts=nil)
         @root = Root.new manifest
         @client = client
+        @opts=opts
         @recipes = @root.recipes(recipe_sel)
         @applications = Array.new
         @data_services = Array.new

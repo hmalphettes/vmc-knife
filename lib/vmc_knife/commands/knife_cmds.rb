@@ -216,13 +216,30 @@ module VMC::Cli::Command
     def data_shell(data_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path)
     end
+    def data_credentials(data_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:credentials,nil,nil,data_names_regexp,manifest_file_path)
+    end
+    def data_apply_privileges(data_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:apply_privileges,nil,nil,data_names_regexp,manifest_file_path)
+    end
+    def data_import(data_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:import,nil,nil,data_names_regexp,manifest_file_path)
+    end
+    def data_export(data_names_regexp=nil,file_names=nil,manifest_file_path=nil)
+      recipe_configuror(:export,nil,nil,data_names_regexp,manifest_file_path,
+                        {:file_names=>file_names})
+    end
+    def data_drop(data_names_regexp=nil,collection_or_table_names=nil,manifest_file_path=nil)
+      recipe_configuror(:drop,nil,nil,data_names_regexp,manifest_file_path,
+                        {:collection_or_table_names=>collection_or_table_names})
+    end
     
-    def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
+    def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)
       man = load_manifest(manifest_file_path)
       recipes_regexp = as_regexp(recipes_regexp)
       app_names_regexp = as_regexp(app_names_regexp)
       service_names_regexp = as_regexp(service_names_regexp)
-      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
+      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp,opts)
       method_object = configurer.method(method_sym_name)
       method_object.call
     end
