@@ -19,6 +19,18 @@ module VMC
       db = File.open( postgresql_node_yml_path ) do |yf| YAML::load( yf ) end
       db['postgresql']
     end
+        
+    def self.get_app_id(app_name)
+       db=get_ccdb_credentials()
+       app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{app_name}'\" #{PSQL_RAW_RES_ARGS}`
+       app_id
+    end
+    def self.get_service_config_id(service_name)
+       db=get_ccdb_credentials()
+       #todo add the user_id
+       service_config_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
+       service_config_id
+    end
     
     # Returns a hash of the credentials for a data-service
     # For example for postgres:
@@ -42,10 +54,16 @@ module VMC
     #password: 8ab08355-6509-48d5-974f-27c853b842f5+
     #node_id: mongodb_node_0
     #
-    def self.get_credentials(service_name)
-#       credentials_str = `sudo -u postgres psql --dbname #{ccdb_name} -c \"select credentials from service_configs where alias='#{service_name}'\" -P format=unaligned -P footer=off -P tuples_only=on`
+    def self.get_credentials(service_name, app_name=nil)
        db=get_ccdb_credentials()
-       credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
+       puts "Credentials for #{service_name} with the user for the application #{app_name}"
+       if app_name.nil?
+         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
+       else
+         app_id = get_app_id(app_name)
+         service_config_id = get_service_config_id(service_name)
+         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_bindings where app_id = '#{app_id}' and service_config_id='#{service_config_id}'\" #{PSQL_RAW_RES_ARGS}`
+       end
        res = Hash.new
        credentials_str.split("\n").each do | line |
          line =~ /([\w]*): ([\w|\.]*)$/
@@ -143,14 +161,17 @@ module VMC
         end
       end
       def import()
+        file_names = @opts[:file_names] if @opts
+        app_name = @opts[:app_name] if @opts
         @data_services.each do |data_service|
-          data_service.import
+          data_service.import(app_name,file_names)
         end
       end
       def export()
-        file_names = @opts[:file_names] if @opts
+        file_names = opts()[:file_names] if opts()
+        app_name = opts()[:app_name] if opts()
         @data_services.each do |data_service|
-          data_service.export
+          data_service.export(app_name,file_names)
         end
       end
       def drop()
@@ -166,8 +187,8 @@ module VMC
       include Interactive
       
       # The credentials hash for this data-service
-      def credentials()
-        @credentials ||= VMC::KNIFE.get_credentials(name())
+      def credentials(app_name=nil)
+        @credentials ||= VMC::KNIFE.get_credentials(name(), app_name)
         @credentials
       end
       
@@ -176,16 +197,16 @@ module VMC
         VMC::KNIFE.data_service_console(credentials(),commands_file,as_admin)
       end
       
-      def import(file)
+      def import(app_name,file)
         
       end
       
-      def export(file=nil)
+      def export(app_name=nil,file=nil)
         file = "#{name()}.sql"
         `touch #{file}`
         `chmod o+w #{file}`
-        puts "Exports the database #{credentials()['name']} in #{file}"
-        cmd = VMC::KNIFE.pg_connect_cmd(credentials(), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
+        puts "Exports the database #{credentials(app_name)['name']} in #{file}"
+        cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
         puts cmd
         puts `#{cmd}`
         `chmod o-w #{file}`
