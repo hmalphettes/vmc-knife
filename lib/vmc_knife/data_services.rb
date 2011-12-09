@@ -1,6 +1,7 @@
 require 'yaml'
 require "interact"
 require 'tempfile'
+require 'tmpdir'
 
 module VMC
   module KNIFE
@@ -56,7 +57,6 @@ module VMC
     #
     def self.get_credentials(service_name, app_name=nil)
        db=get_ccdb_credentials()
-       puts "Credentials for #{service_name} with the user for the application #{app_name}"
        if app_name.nil?
          credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
        else
@@ -66,7 +66,7 @@ module VMC
        end
        res = Hash.new
        credentials_str.split("\n").each do | line |
-         line =~ /([\w]*): ([\w|\.]*)$/
+         line =~ /([\w]*): ([\w|\.|-]*)$/
          res[$1] = $2 if $2
        end
        res
@@ -103,6 +103,7 @@ module VMC
         # Todo: compute the mongoshell path (?)
         mongo_shell=find_mongo_exec()
         cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}/#{credentials_hash['db']}"
+        puts "Executing #{cmd}"
         if commands_file
           if File.exists? commands_file
             # not supported yet.
@@ -133,8 +134,8 @@ module VMC
     
     def self.find_mongo_exec()
       mongo=`which mongo`
-      return mongo unless mongo.nil? || mongo.size=0
-      mongo_files = Dir.glob("#{ENV['HOME']}/cloudfoundry/.deployments", "*", "deploy/mongodb/bin/mongo")
+      return mongo unless mongo.nil? || mongo.empty?
+      mongo_files = Dir.glob("#{ENV['HOME']}/cloudfoundry/.deployments/*/deploy/mongodb/bin/mongo")
       mongo_files.first unless mongo_files.empty?
     end
     
@@ -147,7 +148,8 @@ module VMC
     class RecipesConfigurationApplier
       def shell()
         @data_services.each do |data_service|
-          data_service.shell
+          app_name = opts()[:app_name] if opts()
+          data_service.shell(app_name)
         end
       end
       def credentials()
@@ -188,6 +190,11 @@ module VMC
       
       # The credentials hash for this data-service
       def credentials(app_name=nil)
+        #bound_app is the name of an app bound to the dat-service and that credentials
+        #should be used to access the data-service.
+        #for example if an app creates large objects you will need to use
+        #the credentials of that app to find the objects.
+        app_name ||= @wrapped['director']['bound_app'] if @wrapped['director']
         @credentials ||= VMC::KNIFE.get_credentials(name(), app_name)
         @credentials
       end
@@ -197,19 +204,95 @@ module VMC
         VMC::KNIFE.data_service_console(credentials(),commands_file,as_admin)
       end
       
-      def import(app_name,file)
-        
+      def import(app_name=nil,file=nil)
+        file ||= @wrapped['director']['import_url'] if @wrapped['director']
+        if file.nil?
+          files = Dir.glob("#{name()}.*")
+          raise "Unable to locate the database file to import." if files.empty?
+          file = files.first
+        end
+        is_tmp = false
+        current_wd = Dir.pwd
+        begin
+          if file =~ /^https?:\/\// || file =~ /^ftp:\/\//
+            url = file
+            is_tmp = true
+            if file =~ /[^\/]*$/
+              basename = $0
+            end
+            tempfile = Tempfile.new("import_db_#{basename}")
+            wget_args = @application_json['repository']['wget_args']
+            if wget_args.nil?
+              wget_args_str = ""
+            elsif wget_args.kind_of? Array
+              wget_args_str = wget_args.join(' ')
+            elsif wget_args.kind_of? String
+              wget_args_str = wget_args
+            end
+            `wget #{wget_args_str} --output-document=#{tempfile.path} #{url}`
+            file = tempfile.path
+          end
+          #unzip if necessary (in progress)
+          
+          if /\.tgz$/ =~ file || /\.tar\.gz$/ =~ file
+            tmp_dir = Dir.mktmpdir
+            Dir.chdir(tmp_dir.path)
+            `tar zxvf #{file.path}`
+          elsif /\.tar$/ =~ file
+            tmp_dir = Dir.mktmpdir
+            Dir.chdir(tmp_dir.path)
+            `tar xvf #{file}`
+          elsif /\.zip$/ =~ file
+            tmp_dir = Dir.mktmpdir
+            Dir.chdir(tmp_dir.path)
+            `unzip #{file}`
+          end
+          if tmp_dir
+            `rm #{file}`
+            files = Dir.glob("*.sql") if is_postgresql
+            files = Dir.glob("*.bson") if is_mongodb
+            files ||= Dir.glob("*")
+            raise "Can't find the db-dump file." if files.empty?
+            file = files.first
+          end
+          
+          if is_postgresql
+            `chmod o+w #{file}`
+            #TODO:
+            if /\.sql$/ =~ file
+              `psql --dbname #{dbname} --file #{file} --clean --quiet --username #{rolename}`
+            else
+              `pg_restore --dbname=#{dbname} --username=#{username} --no-acl --no-privileges --no-owner #{file}`
+            end
+            `chmod o-w #{file}`
+          else
+            raise "Unsupported type of data-service. Postgresql is the only supported service at the moment."
+          end
+        ensure
+          file.unlink if is_tmp  # deletes the temp file
+          tmp_dir.unlink if tmp_dir  # deletes the temp directory
+          Dir.chdir(current_wd)
+        end
       end
       
       def export(app_name=nil,file=nil)
-        file = "#{name()}.sql"
-        `touch #{file}`
-        `chmod o+w #{file}`
-        puts "Exports the database #{credentials(app_name)['name']} in #{file}"
-        cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
-        puts cmd
-        puts `#{cmd}`
-        `chmod o-w #{file}`
+        if is_postgresql
+          if file.nil?
+            extension = @wrapped['director']['file_extension'] if @wrapped['director']
+            extension = is_mongodb() ? "bson" : "sql"
+            file = "#{name()}.#{extension}"
+          end
+          `touch #{file}`
+          `chmod o+w #{file}`
+          puts "Exports the database #{credentials(app_name)['name']} in #{file}"
+          
+          #sudo -u postgres env PGPASSWORD=$PGPASSWORD dbname=$DBNAME DUMPFILE=$DUMPFILE pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
+
+          cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
+          puts cmd
+          puts `#{cmd}`
+          `chmod o-w #{file}`
+        end
       end
       
       def is_postgresql()
@@ -261,7 +344,8 @@ module VMC
           puts cmd
           puts `#{cmd}`
         elsif is_mongodb
-          puts "TODO: Unsupported operation 'drop' for the data-service #{name()}"
+          #TODO: iterate over the collections and drop them according to the filter.
+          raise "TODO: Unsupported operation 'drop' for the data-service #{name()}"
         else
           puts "Unsupported operation 'drop' for the data-service #{name()}"
         end
