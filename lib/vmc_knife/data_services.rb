@@ -81,16 +81,17 @@ module VMC
         db_arg = credentials_hash['name']
         return "export PGPASSWORD=#{db['pass']}; #{executable} -h #{db['host']} -p #{db['port']} -U #{db['user']} #{other_params} #{db_arg}"
       elsif executable =~ /pg_dump$/
-        db_arg = "#{credentials_hash['name']}"
+        db_arg = "#{other_params} #{credentials_hash['name']}"
       else
-        db_arg = "--dbname=#{credentials_hash['name']}"
+        #the other params are at the end
+        db_arg = "--dbname=#{credentials_hash['name']} #{other_params}"
       end
       if as_admin
         # usually as vcap/vcap
         db=get_postgresql_node_credentials()
-        "export PGPASSWORD=#{db['pass']}; #{executable} --host=#{db['host']} --port=#{db['port']} --username=#{db['user']} #{other_params} #{db_arg}"
+        "export PGPASSWORD=#{db['pass']}; #{executable} --host=#{db['host']} --port=#{db['port']} --username=#{db['user']} #{db_arg}"
       else
-        "export PGPASSWORD=#{credentials_hash['password']}; #{executable} --host=#{credentials_hash['hostname']} --port=#{credentials_hash['port']} --username=#{credentials_hash['username']} #{other_params} #{db_arg}"
+        "export PGPASSWORD=#{credentials_hash['password']}; #{executable} --host=#{credentials_hash['hostname']} --port=#{credentials_hash['port']} --username=#{credentials_hash['username']} #{db_arg}"
       end
     end
     
@@ -260,10 +261,16 @@ module VMC
             `chmod o+w #{file}`
             #TODO:
             if /\.sql$/ =~ file
-              `psql --dbname #{dbname} --file #{file} --clean --quiet --username #{rolename}`
+              other_params="--file #{file} --quiet"
+              cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'psql',as_admin=false, other_params)
+              #`psql --dbname #{dbname} --file #{file} --clean --quiet --username #{rolename}`
             else
-              `pg_restore --dbname=#{dbname} --username=#{username} --no-acl --no-privileges --no-owner #{file}`
+              other_params="--clean --no-acl --no-privileges --no-owner #{file}"
+              cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_restore',false, other_params)
+              #`pg_restore --dbname=#{dbname} --username=#{username} --no-acl --no-privileges --no-owner #{file}`
             end
+            puts cmd
+            puts `#{cmd}`
             `chmod o-w #{file}`
           else
             raise "Unsupported type of data-service. Postgresql is the only supported service at the moment."
