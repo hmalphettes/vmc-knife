@@ -138,7 +138,7 @@ The console will look like this:
 
 
 
-Updating an app:
+### Updating an app:
 
 For example edit the memory parameter of the app. Then call:
 
@@ -148,8 +148,12 @@ For example edit the memory parameter of the app. Then call:
 Note that vmc_knife's start/stop/restart only sends the command to vcap's cloud_controller.
 It does not try to poll it to see if the command was successful.
 
-In progress:
-Accessing the data-services:
+Delete data-services and apps in the recipe:
+
+    vmc_knife delete-all
+
+
+### Accessing the data-services:
 Assuming that vmc_knife is able to locate the cloud_controller.yml and mongo binary:
 
     vmc_knife data-shell mongo1
