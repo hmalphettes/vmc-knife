@@ -149,7 +149,15 @@ Assuming that vmc_knife is able to locate the cloud_controller.yml and mongo bin
 
     vmc_knife data-shell mongo1
 
-will drop the user to the mongo shell.
+will drop the user to the mongo shell:
+
+    ubuntu@ubuntu:~/tmp$ vmc_knife data-shell mongo1
+    Applications selected mongo_db_demo
+    Data-services selected a_mongo
+    Executing /home/ubuntu/cloudfoundry/.deployments/intalio_devbox/deploy/mongodb/bin/mongo -u 6e409825-31f6-4a47-8eef-11f49e763a9a -p 153c52d6-26ab-467b-9c1d-bc1b071a5c86 192.168.0.138:25001/db
+    MongoDB shell version: 1.8.1
+    connecting to: 192.168.0.138:25001/db
+    >
 
 With postgresql export and import are supported.
 
