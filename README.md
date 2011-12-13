@@ -135,6 +135,7 @@ The console will look like this:
 
 Updating an app:
 For example edit the memory parameter of the app. Then call:
+
     vmc_knife configure-apps
     vmc_knife restart-apps example_mongo
 
@@ -144,7 +145,9 @@ It does not try to poll it to see if the command was successful.
 In progress:
 Accessing the data-services:
 Assuming that vmc_knife is able to locate the cloud_controller.yml and mongo binary:
-  vmc_knife data-shell mongo1
+
+    vmc_knife data-shell mongo1
+
 will drop the user to the mongo shell.
 
 With postgresql export and import are supported.
