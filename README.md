@@ -13,18 +13,23 @@ Run the deployment file via a web-interface.
 
 ## Installation
 ssh into a Cloudfoundry VM
-load the cloudfoundry profile: source /home/ubuntu/.cloudfoundry_deployment_local
-gem install vmc_knife
+load the cloudfoundry profile and install the gem:
+
+    source /home/ubuntu/.cloudfoundry_deployment_local
+    gem install vmc_knife
 
 Or to install from source:
-git clone https://github.com/hmalphettes/vmc-knife.git
-cd vmc-knife
-gem build vmc_knife.gemspec
-gem install vmc_knife
+
+    git clone https://github.com/hmalphettes/vmc-knife.git
+    cd vmc-knife
+    gem build vmc_knife.gemspec
+    gem install vmc_knife
 
 ## Example:
 Create a recipe with the mongodb app example and the sinatra example app.
+
 Make a new file example_recipe.json
+
 Enter:
 
     {
