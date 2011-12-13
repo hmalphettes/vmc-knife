@@ -134,6 +134,7 @@ The console will look like this:
 
 
 Updating an app:
+
 For example edit the memory parameter of the app. Then call:
 
     vmc_knife configure-apps
