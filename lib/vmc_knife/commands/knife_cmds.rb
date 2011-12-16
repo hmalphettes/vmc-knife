@@ -5,8 +5,10 @@ module VMC::KNIFE::Cli
   #loads the manifest file.
   #when the path is not specified, look in the current directory.
   #when the path is a directory, look for the first json file it can find.
+  #if it still find nothing then use the default which is the value of the environment variable VMC_KNIFE_DEFAULT_RECIPE
   #the json file actually loaded is set as the attribute @manifest_path
   def load_manifest(manifest_file_path=nil)
+    was_nil = true if manifest_file_path.nil?
     manifest_file_path = Dir.pwd if manifest_file_path.nil?
     if File.directory? manifest_file_path
       #look for the first .json file if possible that is not an expanded.json
@@ -17,7 +19,12 @@ module VMC::KNIFE::Cli
         end
         return VMC::KNIFE::JSON_EXPANDER.expand_json @manifest_path
       end
-      raise "Unable to find a *.json file in #{manifest_file_path}"
+      if was_nil && !ENV['VMC_KNIFE_DEFAULT_RECIPE'].nil?
+        raise "Can't load the default recipe VMC_KNIFE_DEFAULT_RECIPE=#{ENV['VMC_KNIFE_DEFAULT_RECIPE']}" unless File.exists? ENV['VMC_KNIFE_DEFAULT_RECIPE']
+        load_manifest ENV['VMC_KNIFE_DEFAULT_RECIPE']
+      else
+        raise "Unable to find a *.json file in #{manifest_file_path}"
+      end
     else
       @manifest_path = manifest_file_path
       return VMC::KNIFE::JSON_EXPANDER.expand_json @manifest_path
@@ -41,9 +48,7 @@ module VMC::Cli::Command
       if VMC::Cli::Config.trace
         display JSON.pretty_generate(res)
       end
-      File.open(destination, 'w') do |f|
-        f.write(JSON.pretty_generate(res))
-      end
+      File.open(destination, 'w') {|f| f.write(JSON.pretty_generate(res)) }
     end
     
     # updates the cloud_controller
