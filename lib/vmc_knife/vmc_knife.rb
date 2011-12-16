@@ -431,10 +431,12 @@ module VMC
         return unless @application_json['repository']
         url = @application_json['repository']['url']
         Dir.chdir(ENV['HOME']) do
-          FileUtils.mkdir_p "vmc_knife_downloads/#{@application_json['name']}"
-          Dir.chdir("vmc_knife_downloads/#{@application_json['name']}") do
+          tmp_download_filename="_download_.zip"
+          app_download_dir="vmc_knife_downloads/#{@application_json['name']}"
+          `rm -rf #{app_download_dir}` if File.exist? "#{app_download_dir}/#{tmp_download_filename}"
+          FileUtils.mkdir_p app_download_dir
+          Dir.chdir(app_download_dir) do
             if Dir.entries(Dir.pwd).size == 2
-              puts "Dir.entries(#{Dir.pwd}).size #{Dir.entries(Dir.pwd).size}"
               #empty directory.
               if /\.git$/ =~ url
                 `git clone #{url} --depth 1`
@@ -442,28 +444,31 @@ module VMC
                 if branch
                   `git checkout #{branch}`
                 else
-                  branch=master
+                  branch='master'
                 end
                 `git pull origin #{branch}`
               else
-                wget_args = @application_json['repository']['wget_args']
-                if wget_args.nil?
-                  wget_args_str = ""
-                elsif wget_args.kind_of? Array
-                  wget_args_str = wget_args.join(' ')
-                elsif wget_args.kind_of? String
-                  wget_args_str = wget_args
+                begin
+                  wget_args = @application_json['repository']['wget_args']
+                  if wget_args.nil?
+                    wget_args_str = ""
+                  elsif wget_args.kind_of? Array
+                    wget_args_str = wget_args.join(' ')
+                  elsif wget_args.kind_of? String
+                    wget_args_str = wget_args
+                  end
+                  `wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url}`
+                  raise "Unable to download #{url}" unless $? == 0
+                  if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
+                    `tar zxvf #{tmp_download_filename}`
+                  elsif /\.tar$/ =~ url
+                    `tar xvf #{tmp_download_filename}`
+                  else
+                    `unzip #{tmp_download_filename}`
+                  end
+                ensure
+                  `rm #{tmp_download_filename}`
                 end
-                `wget #{wget_args_str} --output-document=_download_.zip #{url}`
-                raise "Unable to download #{url}" unless $? == 0
-                if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
-                  `tar zxvf _download_.zip`
-                elsif /\.tar$/ =~ url
-                  `tar xvf _download_.zip`
-                else
-                  `unzip _download_.zip`
-                end
-                `rm _download_.zip`
               end
             end
             Dir.chdir(@application_json['repository']['sub_dir']) if @application_json['repository']['sub_dir']

@@ -41,7 +41,9 @@ module VMC::Cli::Command
       if VMC::Cli::Config.trace
         display JSON.pretty_generate(res)
       end
-      File.open(destination, 'w') {|f| f.write(JSON.pretty_generate(res)) }
+      File.open(destination, 'w') do |f|
+        f.write(JSON.pretty_generate(res))
+      end
     end
     
     # updates the cloud_controller
