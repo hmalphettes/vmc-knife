@@ -50,9 +50,7 @@ module VMC
       # Makes up to 10 passes evaluating ruby in the values that contain #{}.
       def self.expand_json(file_path)
         raise "The file #{file_path} does not exist" unless File.exists? file_path
-        File.open(file_path, "r") do |infile|
-          data = JSON.parse infile.read
-        end
+        data = File.open(file_path, "r") do |infile| JSON.parse infile.read end
         #puts "got data #{data.to_json}"
         passes = 0
         while passes < 100

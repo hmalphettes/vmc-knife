@@ -23,9 +23,6 @@ module VMC
       def sub_domain()
         @wrapped['sub_domain']
       end
-      def target()
-        @wrapped['target']
-      end
       def user()
         @wrapped['user']
       end

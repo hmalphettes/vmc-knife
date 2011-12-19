@@ -2,6 +2,7 @@ require 'yaml'
 require "interact"
 require 'tempfile'
 require 'tmpdir'
+require 'pathname'
 
 module VMC
   module KNIFE
@@ -212,52 +213,64 @@ module VMC
           raise "Unable to locate the database file to import." if files.empty?
           file = files.first
         end
-        is_tmp = false
-        current_wd = Dir.pwd
-        begin
+        
+
+        tmp_download_filename="_download_.zip"
+        data_download_dir="#{ENV['HOME']}/vmc_knife_downloads/data_#{@wrapped['name']}"
+        current_wd=Dir.pwd
+        FileUtils.mkdir_p data_download_dir
+        Dir.chdir(data_download_dir) do
           if file =~ /^https?:\/\// || file =~ /^ftp:\/\//
-            url = file
-            is_tmp = true
-            if file =~ /[^\/]*$/
-              basename = $0
+            basename = Pathname.new(URI.parse(file).path).basename.to_s
+          else
+            file=File.expand_path(file,current_wd)
+            basename = File.basename(file).to_s
+          end
+          if Dir.entries(Dir.pwd).size == 2
+            if file =~ /^https?:\/\// || file =~ /^ftp:\/\//
+              wget_args = @wrapped['director']['wget_args']
+              if wget_args.nil?
+                wget_args_str = ""
+              elsif wget_args.kind_of? Array
+                wget_args_str = wget_args.join(' ')
+              elsif wget_args.kind_of? String
+                wget_args_str = wget_args
+              end
+              `wget #{wget_args_str} --output-document=#{basename} #{file}`
+              if $? != 0
+                `rm #{data_download_dir}/#{basename}`
+                raise "Unable to successfully download #{file}"
+              end
+            else
+              `cp #{file} #{basename}`
             end
-            tempfile = Tempfile.new("import_db_#{basename}")
-            wget_args = @application_json['repository']['wget_args']
-            if wget_args.nil?
-              wget_args_str = ""
-            elsif wget_args.kind_of? Array
-              wget_args_str = wget_args.join(' ')
-            elsif wget_args.kind_of? String
-              wget_args_str = wget_args
-            end
-            `wget #{wget_args_str} --output-document=#{tempfile.path} #{url}`
-            file = tempfile.path
           end
           #unzip if necessary (in progress)
-          
-          if /\.tgz$/ =~ file || /\.tar\.gz$/ =~ file
-            tmp_dir = Dir.mktmpdir
-            Dir.chdir(tmp_dir.path)
-            `tar zxvf #{file.path}`
-          elsif /\.tar$/ =~ file
-            tmp_dir = Dir.mktmpdir
-            Dir.chdir(tmp_dir.path)
-            `tar xvf #{file}`
-          elsif /\.zip$/ =~ file
-            tmp_dir = Dir.mktmpdir
-            Dir.chdir(tmp_dir.path)
-            `unzip #{file}`
+          is_unzipped=true
+          p "unzip #{basename}"
+          if /\.tgz$/ =~ basename || /\.tar\.gz$/ =~ basename
+            `tar zxvf #{basename}`
+          elsif /\.tar$/ =~ basename
+            `tar xvf #{basename}`
+          elsif /\.zip$/ =~ basename
+            `unzip #{basename}`
+          else
+            is_unzipped=false
           end
-          if tmp_dir
-            `rm #{file}`
+          
+          if is_unzipped
+            #`rm #{basename}`
             files = Dir.glob("*.sql") if is_postgresql
             files = Dir.glob("*.bson") if is_mongodb
             files ||= Dir.glob("*")
             raise "Can't find the db-dump file." if files.empty?
             file = files.first
+          else
+            file = basename
           end
-          
+            
           if is_postgresql
+            p "chmod o+w #{file}"
             `chmod o+w #{file}`
             #TODO:
             if /\.sql$/ =~ file
@@ -275,10 +288,6 @@ module VMC
           else
             raise "Unsupported type of data-service. Postgresql is the only supported service at the moment."
           end
-        ensure
-          file.unlink if is_tmp  # deletes the temp file
-          tmp_dir.unlink if tmp_dir  # deletes the temp directory
-          Dir.chdir(current_wd)
         end
       end
       
@@ -292,8 +301,8 @@ module VMC
           `touch #{file}`
           `chmod o+w #{file}`
           puts "Exports the database #{credentials(app_name)['name']} in #{file}"
-          
-          #sudo -u postgres env PGPASSWORD=$PGPASSWORD dbname=$DBNAME DUMPFILE=$DUMPFILE pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
+          #sudo -u postgres env PGPASSWORD=intalio DBNAME=intalio DUMPFILE=intalio_dump.sql pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
+          #sudo -u postgres env PGPASSWORD=$PGPASSWORD DUMPFILE=$DUMPFILE pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
 
           cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
           puts cmd
@@ -309,7 +318,11 @@ module VMC
       def is_mongodb()
         credentials()['db'] != nil
       end
-                                                                                                                                                      
+      
+      # Make sure that all users who can connect to the DB can also access
+      # the tables.
+      # This workarounds the privilege issue reported here:
+      # 
       def apply_privileges()
         if is_postgresql()
           cmd_acl="GRANT CREATE ON SCHEMA PUBLIC TO PUBLIC;\
