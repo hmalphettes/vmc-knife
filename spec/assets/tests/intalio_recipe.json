@@ -1,11 +1,15 @@
 {
   "sub_domain" : "intalio.local",
+  "sub_domain_local" : "intalio.local",
+  "sub_domain_local_unique" : "intalio-#{ip_seed}.local",
+  "sub_domains" : [ "#{this['sub_domain']}"],
+  "sub_domains_all" : [ "#{this['sub_domain']}","#{this['sub_domain_local']}","#{this['sub_domain_local_unique']}"],
   "target" : "api.#{this['sub_domain']}",
   "email" : "bob@example.com",
   "password" : "secret",
   "recipes":
   [{
-     "name" : "intagit lio_recipe",
+     "name" : "intalio_recipe",
      "data_services" :
      {
         "pg_intalio" :
@@ -21,14 +25,23 @@
      },
      "applications":
      {
+        "oauth" :
+        {
+           "name" : "oauth",
+           "uris" : [ "#{this['sub_domains'].uniq.collect do |x| 'oauth.' + x end }" ],
+           "uris_old" : ["oauth.#{this['sub_domain']}"],
+           "staging": { "stack" : "node", "model" : "nodejs" },
+           "resources": {"memory":64},
+           "services": "#{this['recipes'][0]['applications']['intalio']['services']}"
+        },
         "intalio" :
         {
            "name" : "intalio",
-           "uris" : ["#{this['sub_domain']}","intalio.#{this['sub_domain']}"],
+           "uris" : [ "#{this['sub_domains']}" ],
            "staging": { "stack" : "java", "model" : "spring" },
            "resources":{"memory":3072},
            "services": ["pg_intalio","mg_intalio"],
-           "env": [ "INTALIO_AUTH=http://#{this['recipes'][0]['applications']['oauth']['uris'][0]}",
+           "env": [ "INTALIO_AUTH=#{this['recipes'][0]['applications']['oauth']['uris'].uniq.collect do |x| 'http://' + x end.join(',')}",
                     "JAVA_OPTS=-XX:MaxPermSize\=384m" ],
            "repository":
            {
@@ -37,22 +50,16 @@
               "user":"bob", "password":"secret"
            }
         },
-        "oauth" :
-        {
-           "name" : "oauth",
-           "uris" : ["oauth.#{this['sub_domain']}"],
-           "staging": { "stack" : "node", "model" : "nodejs" },
-           "resources": {"memory":64},
-           "services": "#{this['recipes'][0]['applications']['intalio']['services']}"
-        },
         "admin" :
         {
            "name" : "admin",
-           "uris" : ["admin.#{this['sub_domain']}"],
+           "uris" : [ "#{this['sub_domains'].collect do |x| 'admin.' + x end }" ],
+           "uris_old" : ["admin.#{this['sub_domain']}"],
            "staging": { "stack" : "ruby19", "model" : "sinatra" },
            "resources": {"memory":128},
            "services": "#{this['recipes'][0]['applications']['intalio']['services']}",
-           "env": [ "INTALIO_AUTH=http://#{this['recipes'][0]['applications']['oauth']['uris'][0]}" ]
+           "env": [ "INTALIO_AUTH=#{this['recipes'][0]['applications']['oauth']['uris'].uniq.collect do |x| 'http://' + x end.join(',')}" ],
+           "env_old": [ "INTALIO_AUTH=http://#{this['recipes'][0]['applications']['oauth']['uris'].uniq.join(',')}" ]
         }
      }
   }]

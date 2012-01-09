@@ -27,7 +27,7 @@ describe 'VMC::KNIFE' do
     intalio = root.recipe('intalio_recipe').application('intalio')
     env = intalio.env
     env.should
-    env.get('INTALIO_AUTH').should == "http://oauth.intalio.local"
+    env.get('INTALIO_AUTH').should == "oauth.intalio.local"
     env.get('FOO').should == nil
     env.set('FOO',"bar")
     env.get('FOO').should == "bar"
@@ -48,7 +48,7 @@ describe 'VMC::KNIFE' do
     configure_oauth.__set_current(JSON.parse File.open(current).read)
     diff = configure_oauth.updates_pending()
     puts JSON.pretty_generate diff
-    diff.size.should ==1
+    diff.size.should ==2
     diff['uris'].should
     diff['uris']['add'].should == ["oauth.intalio.local"]
     diff['uris']['remove'].should == ["oauth.vcap.me"]

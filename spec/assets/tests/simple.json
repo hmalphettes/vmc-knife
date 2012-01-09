@@ -1,0 +1,13 @@
+{
+  "sub_domain" : "intalio.local",
+  "sub_domain_local" : "intalio.local",
+  "sub_domain_local_unique" : "intalio-#{ip_seed}.local",
+  "sub_domains" : [ "#{this['sub_domain']}","#{this['sub_domain_local']}","#{this['sub_domain_local_unique']}"],
+  "forward_looking_reference" : [ "FOO=#{this['http_alist'].join(',')}" ],
+  "forward_looking_reference_concat" : [ "concat.#{this['target']}" ],
+  "target" : "api.#{this['sub_domain']}",
+  "email" : "bob@example.com",
+  "password" : "secret",
+  "http_alist" : "#{this['sub_domains'].collect do |x| 'http://'+x end }",
+  "http_alist_too_we_flatten_when_we_see_this" : [ "#{this['sub_domains'].collect do |x| 'http://'+x end }" ]
+}
