@@ -11,15 +11,20 @@ module VMC
     PSQL_RAW_RES_ARGS="-P format=unaligned -P footer=off -P tuples_only=on"
 
     # Reads the cloud_controller config file for the connection parameters to ccdb.
-    def self.get_ccdb_credentials(ccdb_yml_path="#{ENV['HOME']}/cloudfoundry/config/cloud_controller.yml", db_type='production')
+    def self.get_ccdb_credentials(ccdb_yml_path="#{ENV['CLOUD_FOUNDRY_CONFIG_PATH']}/cloud_controller.yml", db_type='production')
       cc_conf = File.open( ccdb_yml_path ) do |yf| YAML::load( yf ) end
       db = cc_conf['database_environment'][db_type]
       db
     end
     
-    def self.get_postgresql_node_credentials(postgresql_node_yml_path="#{ENV['HOME']}/cloudfoundry/config/postgresql_node.yml")
+    def self.get_postgresql_node_credentials(postgresql_node_yml_path="#{ENV['CLOUD_FOUNDRY_CONFIG_PATH']}/postgresql_node.yml")
       db = File.open( postgresql_node_yml_path ) do |yf| YAML::load( yf ) end
       db['postgresql']
+    end
+    
+    def self.get_mongodb_node_config(mongodb_node_yml_path="#{ENV['CLOUD_FOUNDRY_CONFIG_PATH']}/mongodb_node.yml")
+      db = File.open( mongodb_node_yml_path ) do |yf| YAML::load( yf ) end
+      db
     end
         
     def self.get_app_id(app_name)
@@ -97,21 +102,30 @@ module VMC
     end
     
     # command_files or command.
-    def self.data_service_console(credentials_hash, commands_file="",as_admin=false)
+    def self.data_service_console(credentials_hash, commands_file="",as_admin=false,exec_name=nil)
       if credentials_hash['db'] #so far it has always been equal to 'db'
         # It is a mongo service
         #/home/ubuntu/cloudfoundry/.deployments/intalio_devbox/deploy/mongodb/bin/mongo 127.0.0.1:25003/db 
         #-u c417f26c-6f49-4dd5-a208-216107279c7a -p 8ab08355-6509-48d5-974f-27c853b842f5
         # Todo: compute the mongoshell path (?)
-        mongo_shell=find_mongo_exec()
-        cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}/#{credentials_hash['db']}"
+        mongo_shell=get_mongo_exec(exec_name)
+        if exec_name == 'mongo'
+          db_arg = "/#{credentials_hash['db']}"
+        elsif exec_name == 'mongodump'
+          db_arg = "" # dump all the databases including 'admin' which contains the users.
+        else
+          db_arg = "--db #{credentials_hash['db']}"
+        end
+        cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}#{db_arg}"
         puts "Executing #{cmd}"
         if commands_file
-          if File.exists? commands_file
-            # not supported yet.
-            commands_file = "--eval \"#{`cat commands_file`}"
-          else
-            commands_file = "--eval \"#{commands_file}\""
+          if mongo_shell == 'mongo'
+            if File.exists? commands_file
+              # not supported yet.
+              commands_file = "--eval \"#{`cat commands_file`}"
+            else
+              commands_file = "--eval \"#{commands_file}\""
+            end
           end
           `#{cmd} #{commands_file}`
         else
@@ -134,16 +148,23 @@ module VMC
       end
     end
     
-    def self.find_mongo_exec()
-      mongo=`which mongo`
-      return mongo unless mongo.nil? || mongo.empty?
-      mongo_files = Dir.glob("#{ENV['HOME']}/cloudfoundry/.deployments/*/deploy/mongodb/bin/mongo")
-      mongo_files.first unless mongo_files.empty?
+    def self.get_mongo_exec(exec_name='mongo')
+      mongo_bin_folder=File.dirname(get_mongodb_node_config()['mongod_path'])
+      File.join(mongo_bin_folder,exec_name)
+    end
+    
+    # Returns the path to the mongodb db files. /var/vcap/services/mongodb/
+    def self.get_mongodb_base_dir(mongodb_node_yml_path=nil)
+      mongodb_node_yml_path||="#{ENV['CLOUD_FOUNDRY_CONFIG_PATH']}/mongodb_node.yml"
+      db = File.open( mongodb_node_yml_path ) do |yf| YAML::load( yf ) end
+      base_dir = db['base_dir']
     end
     
     def self.as_regexp(arg)
       if arg != nil && arg.kind_of?(String) && !arg.strip.empty?
         Regexp.new(arg)
+      elsif arg.kind_of?(Regexp)
+        arg
       end
     end
     
@@ -182,6 +203,12 @@ module VMC
         collection_or_table_names = @opts[:collection_or_table_names] if @opts
         @data_services.each do |data_service|
           data_service.drop(collection_or_table_names)
+        end
+      end
+      def shrink()
+        collection_or_table_names = @opts[:collection_or_table_names] if @opts
+        @data_services.each do |data_service|
+          data_service.shrink(collection_or_table_names)
         end
       end
       
@@ -272,21 +299,43 @@ module VMC
           if is_postgresql
             p "chmod o+w #{file}"
             `chmod o+w #{file}`
-            #TODO:
+            creds=credentials(app_name)
             if /\.sql$/ =~ file
               other_params="--file #{file} --quiet"
-              cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'psql',as_admin=false, other_params)
+              cmd = VMC::KNIFE.pg_connect_cmd(creds, 'psql',as_admin=false, other_params)
               #`psql --dbname #{dbname} --file #{file} --clean --quiet --username #{rolename}`
             else
               other_params="--clean --no-acl --no-privileges --no-owner #{file}"
-              cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_restore',false, other_params)
+              cmd = VMC::KNIFE.pg_connect_cmd(creds, 'pg_restore',false, other_params)
               #`pg_restore --dbname=#{dbname} --username=#{username} --no-acl --no-privileges --no-owner #{file}`
             end
             puts cmd
             puts `#{cmd}`
             `chmod o-w #{file}`
+          elsif is_mongodb
+            
+            # see if we go through the filesystem to shrink or
+            # if we are only interested in the data itself.
+            base_dir=VMC::KNIFE.get_mongodb_base_dir()
+            instance_name=creds['name']
+            dbpath=File.join(base_dir, instance_name, 'data')            
+            mongod_lock=File.join(dbpath,'mongo.lock')
+            
+            if File.exists?(mongod_lock) && File.size(mongod_lock)>0
+              # the mongodb instance is currently working. connect to it and do the work.
+              # in that case import the 'db' alone. don't do the 'admin'
+              VMC::KNIFE.data_service_console(creds, File.dirname(file),false,'mongorestore')
+            else
+              # the mongodb instance is not currently working
+              # go directly on the filesystem
+              `rm -rf #{dbpath}`
+              `mkdir -p #{dbpath}`
+              #sudo mongorestore --dbpath /var/lib/mongodb
+              mongorestore_exec=VMC::KNIFE.get_mongo_exec('mongorestore')
+              `#{mongorestore_exec} --dbpath #{dbpath} #{File.dirname(File.dirname(file))}`
+            end
           else
-            raise "Unsupported type of data-service. Postgresql is the only supported service at the moment."
+            raise "Unsupported type of data-service. Postgresql and mongodb are the only supported services at the moment."
           end
         end
       end
@@ -295,7 +344,7 @@ module VMC
         if is_postgresql
           if file.nil?
             extension = @wrapped['director']['file_extension'] if @wrapped['director']
-            extension = is_mongodb() ? "bson" : "sql"
+            extension ||= "sql"
             file = "#{name()}.#{extension}"
           end
           `touch #{file}`
@@ -308,6 +357,42 @@ module VMC
           puts cmd
           puts `#{cmd}`
           `chmod o-w #{file}`
+        elsif is_mongodb
+          if file.nil?
+            extension = @wrapped['director']['file_extension'] if @wrapped['director']
+            extension ||= "bson.tar.gz"
+            file = "#{name()}.#{extension}"
+          end
+          creds=credentials(app_name)
+          puts "Exports the database #{creds['name']} in #{file}"
+          #mongodump --host localhost:27017
+          mongodump_exec=VMC::KNIFE.get_mongo_exec('mongodump')
+          # see if we go through the filesystem or through the network:
+          base_dir=VMC::KNIFE.get_mongodb_base_dir()
+          instance_name=creds['name']
+          dbpath=File.join(base_dir, instance_name, 'data')            
+          mongod_lock=File.join(dbpath,'mongo.lock')
+          if File.exists?(mongod_lock) && File.size(mongod_lock)>0
+            cmd = "#{mongodump_exec} -u #{credentials_hash['username']} -p #{credentials_hash['password']} --host #{credentials_hash['hostname']}:#{credentials_hash['port']}"
+          else
+            cmd = "#{mongodump_exec} --dbpath #{dbpath}"
+          end
+          puts cmd
+          puts `#{cmd}`
+          
+          # this produces a dump folder in the working directory.
+          # let's zip it:
+          if /\.zip$/ =~ extension
+            # just zip
+            `zip -r #{file} dump/`
+          elsif /\.tar$/ =~ extension
+            # just tar
+            `tar cvf #{file} dump/`
+          else
+            # tar-gzip by default
+            `tar czvf #{file} dump/`
+          end
+          `rm -rf dump`
         end
       end
       
@@ -331,6 +416,32 @@ module VMC
           GRANT ALL ON ALL SEQUENCES IN SCHEMA PUBLIC TO PUBLIC;"
           shell(cmd_acl,true)
         end
+      end
+      
+      # shrink the size of the databses on the file system.
+      # Specifically act on the mongodb instances when they are stopped.
+      def shrink(collection_or_table_names=nil)
+        return unless is_mongodb
+        creds=credentials()
+        base_dir=VMC::KNIFE.get_mongodb_base_dir()
+        instance_name=creds['name']
+        dbpath=File.join(base_dir, instance_name, 'data')            
+        mongod_lock=File.join(dbpath,'mongo.lock')
+        raise "Can't shrink #{name}; the mongodb is currently running" if File.exists?(mongod_lock) && File.size(mongod_lock)>0
+        mongodump_exec=VMC::KNIFE.get_mongo_exec('mongodump')
+        raise "Can't find mongodump" unless File.exist? mongodump_exec
+        mongorestore_exec=VMC::KNIFE.get_mongo_exec('mongorestore')
+        raise "Can't find mongorestore" unless File.exist? mongorestore_exec
+        cmd = "#{mongodump_exec} --dbpath #{dbpath}"
+        puts "#{cmd}"
+        puts `#{cmd}`
+        
+        `rm -rf #{dbpath}`
+        `mkdir #{dbpath}`
+        cmd = "#{mongorestore_exec} --dbpath #{dbpath} dump/"
+        puts "#{cmd}"
+        puts `#{cmd}`
+        `rm -rf dump`
       end
       
       def drop(collection_or_table_names=nil)

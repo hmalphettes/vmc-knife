@@ -533,23 +533,30 @@ module VMC
       end
       
       def update_name_pending()
-        if current[:name].nil?
+        curr_name=current[:name] || current['name']
+        if curr_name.nil?
           return "Create #{@application_json['name']}"
         end
-        if @application_json['name'] != @current[:name]
-          return "#{@current[:name]} => #{@application_json['name']}"
+        if @application_json['name'] != curr_name
+          return "#{curr_name} => #{@application_json['name']}"
         end
       end
       def update_memory_pending()
-        old_mem = current[:resources][:memory] unless current[:resources].nil?
+        old_mem = current[:resources][:memory] if current[:resources]
+        old_mem ||= current['resources']['memory'] if current['resources']
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
         if old_mem != new_mem
           return "#{old_mem} => #{new_mem}"
         end
       end
       def update_staging_pending()
-        old_model = current[:staging][:model] unless current[:staging].nil?
-        old_stack = current[:staging][:stack] unless current[:staging].nil?
+        if current[:staging] # sym style: real vmc.
+          old_model = current[:staging][:model]
+          old_stack = current[:staging][:stack]
+        elsif current['staging'] # string style: testing.
+          old_model = current['staging']['model']
+          old_stack = current['staging']['stack']
+        end
         new_model = @application_json['staging']['model'] unless @application_json['staging'].nil?
         new_stack = @application_json['staging']['stack'] unless @application_json['staging'].nil?
         if old_model != new_model
@@ -564,17 +571,17 @@ module VMC
         return { "stack" => stack_change, "model" => model_change }
       end
       def update_services_pending()
-        old_services = current[:services]
+        old_services = current[:services] || current['services']
         new_services = @application_json['services']
         diff_lists(old_services,new_services)
       end
       def update_env_pending()
-        old_services = current[:env]
+        old_services = current[:env] || current['env']
         new_services = @application_json['env']
         diff_lists(old_services,new_services)
       end
       def update_uris_pending()
-        old_services = current[:uris]
+        old_services = current[:uris] || current['uris']
         new_services = @application_json['uris']
         diff_lists(old_services,new_services)
       end
@@ -731,6 +738,7 @@ module VMC
     end
     
     # This is really a server-side feature.
+    # This is deprecated; use the dns_publisher vcap module instead.
     # Regenerates the urls to publish as aliases.
     # use vmc apps to read the uris of each app and also the manifest.
     class VCAPUpdateAvahiAliases
@@ -791,14 +799,18 @@ module VMC
       end
       def execute()
         return unless update_pending()
-        File.open(@config, "w") do |file|
-          all_uris().each do |uri|
-            file.puts uri + "\n"
+        # if the dns_publisher module is present let's not do this one.
+        # the dns_publisher does a better job at mdns
+        unless File.exist? "#{ENV['CLOUD_FOUNDRY_CONFIG_PATH']}/dns_publisher.yml"
+          File.open(@config, "w") do |file|
+            all_uris().each do |uri|
+              file.puts uri + "\n"
+            end
           end
+          #configured so that we don't need root privileges on /etc/avahi/aliases:
+          #the backticks don't work; system() works:
+          system('avahi-publish-aliases') if @do_exec
         end
-        #configured so that we don't need root privileges on /etc/avahi/aliases:
-        #the backticks don't work; system() works:
-        system('avahi-publish-aliases') if @do_exec
       end
       def update_pending()
         already = already_published_uris()

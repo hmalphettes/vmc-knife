@@ -241,6 +241,10 @@ module VMC::Cli::Command
       recipe_configuror(:drop,nil,nil,data_names_regexp,manifest_file_path,
                         {:collection_or_table_names=>collection_or_table_names})
     end
+    def data_shrink(data_names_regexp=nil,collection_or_table_names=nil,manifest_file_path=nil)
+      recipe_configuror(:shrink,nil,nil,data_names_regexp,manifest_file_path,
+                        {:collection_or_table_names=>collection_or_table_names})
+    end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)
       man = load_manifest(manifest_file_path)

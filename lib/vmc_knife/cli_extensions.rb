@@ -168,6 +168,14 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :data_drop, @args.size) # too many
       end
+    when 'data-shrink'
+      usage('vmc_knife data-shrink [<data-service-name>] [<tables-collection-regexp>]')
+      @args.shift # consumes the argument.
+      if @args.size <= 3
+        set_cmd(:knifeapps, :data_shrink, @args.size)
+      else
+        set_cmd(:knifeapps, :data_shrink, @args.size) # too many
+      end
     when 'data-import'
       usage('vmc_knife data-import [<data-service-name>] [<tables-collection-regexp>]')
       @args.shift # consumes the argument.
@@ -185,7 +193,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :data_export, @args.size) # too many
       end
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop [<manifest_path>]"
     else
       super
     end
