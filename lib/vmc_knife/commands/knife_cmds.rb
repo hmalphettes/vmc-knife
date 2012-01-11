@@ -238,11 +238,11 @@ module VMC::Cli::Command
       recipe_configuror(:apply_privileges,nil,nil,data_names_regexp,manifest_file_path,
                         {:data_only=>true})
     end
-    def data_import(data_names_regexp=nil,app_name=nil,file_names=nil,manifest_file_path=nil)
+    def data_import(data_names_regexp=nil,file_names=nil,app_name=nil,manifest_file_path=nil)
       recipe_configuror(:import,nil,nil,data_names_regexp,manifest_file_path,
                         {:file_names=>file_names, :app_name=>app_name, :data_only=>true})
     end
-    def data_export(data_names_regexp=nil,app_name=nil,file_names=nil,manifest_file_path=nil)
+    def data_export(data_names_regexp=nil,file_names=nil,app_name=nil,manifest_file_path=nil)
       recipe_configuror(:export,nil,nil,data_names_regexp,manifest_file_path,
                         {:file_names=>file_names, :app_name=>app_name, :data_only=>true})
     end

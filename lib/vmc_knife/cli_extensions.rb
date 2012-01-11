@@ -177,7 +177,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :data_shrink, @args.size) # too many
       end
     when 'data-import'
-      usage('vmc_knife data-import [<data-service-name>] [<tables-collection-regexp>]')
+      usage('vmc_knife data-import [<data-service-name>] [<archive-file-name>] [<tables-collection-regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 3
         set_cmd(:knifeapps, :data_import, @args.size)
@@ -185,7 +185,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :data_import, @args.size) # too many
       end
     when 'data-export'
-      usage('vmc_knife data-export [<data-service-name>] [<tables-collection-regexp>]')
+      usage('vmc_knife data-export [<data-service-name>] [<archive-file-name>] [<tables-collection-regexp>]')
       @args.shift # consumes the argument.
       if @args.size <= 3
         set_cmd(:knifeapps, :data_export, @args.size)

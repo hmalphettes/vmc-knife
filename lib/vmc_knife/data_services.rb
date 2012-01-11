@@ -196,8 +196,8 @@ module VMC
         end
       end
       def export()
-        file_names = opts()[:file_names] if opts()
-        app_name = opts()[:app_name] if opts()
+        file_names = @opts[:file_names] if @opts
+        app_name = @opts[:app_name] if @opts
         @data_services.each do |data_service|
           data_service.export(app_name,file_names)
         end
@@ -350,13 +350,15 @@ module VMC
             extension ||= "sql"
             file = "#{name()}.#{extension}"
           end
-          `touch #{file}`
-          `chmod o+w #{file}`
+          archive_unzipped=file
+          archive_unzipped="#{name()}.sql" unless /\.sql$/ =~ extension
+          `touch #{archive_unzipped}`
+          `chmod o+w #{archive_unzipped}`
           puts "Exports the database #{credentials(app_name)['name']} in #{file}"
           #sudo -u postgres env PGPASSWORD=intalio DBNAME=intalio DUMPFILE=intalio_dump.sql pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
           #sudo -u postgres env PGPASSWORD=$PGPASSWORD DUMPFILE=$DUMPFILE pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
 
-          cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{file} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
+          cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{archive_unzipped} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
           puts cmd
           puts `#{cmd}`
           `chmod o-w #{file}`
@@ -382,21 +384,23 @@ module VMC
           end
           puts cmd
           puts `#{cmd}`
-          
-          # this produces a dump folder in the working directory.
-          # let's zip it:
-          if /\.zip$/ =~ extension
-            # just zip
-            `zip -r #{file} dump/`
-          elsif /\.tar$/ =~ extension
-            # just tar
-            `tar cvf #{file} dump/`
-          else
-            # tar-gzip by default
-            `tar czvf #{file} dump/`
-          end
-          `rm -rf dump`
+          archive_unzipped="dump"
         end
+          
+        
+        # this produces a dump folder in the working directory.
+        # let's zip it:
+        if /\.zip$/ =~ file
+          # just zip
+          `zip -r #{file} #{archive_unzipped}`
+        elsif /\.tar$/ =~ file
+          # just tar
+          `tar -cvf #{file} #{archive_unzipped}`
+        else
+          # tar-gzip by default
+          `tar -czvf #{file} #{archive_unzipped}`
+        end
+        `rm -rf #{archive_unzipped}` if archive_unzipped != file
       end
       
       def is_postgresql()
