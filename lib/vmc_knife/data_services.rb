@@ -322,7 +322,7 @@ module VMC
             base_dir=VMC::KNIFE.get_mongodb_base_dir()
             instance_name=creds['name']
             dbpath=File.join(base_dir, instance_name, 'data')            
-            mongod_lock=File.join(dbpath,'mongo.lock')
+            mongod_lock=File.join(dbpath,'mongod.lock')
             
             if File.exists?(mongod_lock) && File.size(mongod_lock)>0
               # the mongodb instance is currently working. connect to it and do the work.
@@ -376,9 +376,10 @@ module VMC
           base_dir=VMC::KNIFE.get_mongodb_base_dir()
           instance_name=creds['name']
           dbpath=File.join(base_dir, instance_name, 'data')            
-          mongod_lock=File.join(dbpath,'mongo.lock')
+          mongod_lock=File.join(dbpath,'mongod.lock')
+          puts "looking at #{mongod_lock} exists? #{File.exists?(mongod_lock)} size #{File.size(mongod_lock)}"
           if File.exists?(mongod_lock) && File.size(mongod_lock)>0
-            cmd = "#{mongodump_exec} -u #{credentials_hash['username']} -p #{credentials_hash['password']} --host #{credentials_hash['hostname']}:#{credentials_hash['port']}"
+            cmd = "#{mongodump_exec} -u #{creds['username']} -p #{creds['password']} --host #{creds['hostname']}:#{creds['port']} --db db"
           else
             cmd = "#{mongodump_exec} --dbpath #{dbpath}"
           end
@@ -433,7 +434,7 @@ module VMC
         base_dir=VMC::KNIFE.get_mongodb_base_dir()
         instance_name=creds['name']
         dbpath=File.join(base_dir, instance_name, 'data')            
-        mongod_lock=File.join(dbpath,'mongo.lock')
+        mongod_lock=File.join(dbpath,'mongod.lock')
         raise "Can't shrink #{name}; the mongodb is currently running" if File.exists?(mongod_lock) && File.size(mongod_lock)>0
         mongodump_exec=VMC::KNIFE.get_mongo_exec('mongodump')
         raise "Can't find mongodump" unless File.exist? mongodump_exec
