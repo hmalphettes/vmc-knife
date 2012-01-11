@@ -208,8 +208,10 @@ module VMC
           @applications = @applications + recipe.applications(application_sel)
           @data_services = @data_services + recipe.data_services(service_sel)
         end
-        app_names = @applications.collect {|app| app.name }
-        service_names = @data_services.collect {|service| service.name }
+        app_names = @applications.collect {|app| app.name } unless @opts && @opts[:data_only]
+        service_names = @data_services.collect {|service| service.name } unless @opts && @opts[:apps_only]
+        app_names ||= Array.new
+        service_names ||= Array.new
         if app_names.empty? && service_names.empty?
           puts "No applications and data-services were selected."
         else

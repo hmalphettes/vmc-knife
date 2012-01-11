@@ -178,10 +178,12 @@ module VMC::Cli::Command
     include VMC::KNIFE::Cli
 
     def configure_applications(app_names_regexp=nil,manifest_file_path=nil)
-      configure(nil,nil,app_names_regexp,manifest_file_path)
+      configure(nil,nil,app_names_regexp,manifest_file_path,
+                        {:apps_only=>true})
     end
     def configure_services(services_names_regexp=nil,manifest_file_path=nil)
-      configure(nil,nil,services_names_regexp,manifest_file_path)
+      configure(nil,nil,services_names_regexp,manifest_file_path,
+                        {:data_only=>true})
     end
     def configure_recipes(recipe_names_regexp=nil,manifest_file_path=nil)
       configure(recipe_names_regexp,nil,nil,manifest_file_path)
@@ -206,44 +208,51 @@ module VMC::Cli::Command
     end
     
     def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:upload,nil,app_names_regexp,nil,manifest_file_path)
+      recipe_configuror(:upload,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
     end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:start,nil,app_names_regexp,nil,manifest_file_path)
+      recipe_configuror(:start,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
     end
     def stop_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:stop,nil,app_names_regexp,nil,manifest_file_path)
+      recipe_configuror(:stop,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
     end
     def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:restart,nil,app_names_regexp,nil,manifest_file_path)
+      recipe_configuror(:restart,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
     end
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
     end
     def data_shell(data_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path)
+      recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path,
+                        {:data_only=>true})
     end
     def data_credentials(data_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:credentials,nil,nil,data_names_regexp,manifest_file_path)
+      recipe_configuror(:credentials,nil,nil,data_names_regexp,manifest_file_path,
+                        {:data_only=>true})
     end
     def data_apply_privileges(data_names_regexp=nil,manifest_file_path=nil)
-      recipe_configuror(:apply_privileges,nil,nil,data_names_regexp,manifest_file_path)
+      recipe_configuror(:apply_privileges,nil,nil,data_names_regexp,manifest_file_path,
+                        {:data_only=>true})
     end
     def data_import(data_names_regexp=nil,app_name=nil,file_names=nil,manifest_file_path=nil)
       recipe_configuror(:import,nil,nil,data_names_regexp,manifest_file_path,
-                        {:file_names=>file_names, :app_name=>app_name})
+                        {:file_names=>file_names, :app_name=>app_name, :data_only=>true})
     end
     def data_export(data_names_regexp=nil,app_name=nil,file_names=nil,manifest_file_path=nil)
       recipe_configuror(:export,nil,nil,data_names_regexp,manifest_file_path,
-                        {:file_names=>file_names, :app_name=>app_name})
+                        {:file_names=>file_names, :app_name=>app_name, :data_only=>true})
     end
     def data_drop(data_names_regexp=nil,collection_or_table_names=nil,manifest_file_path=nil)
       recipe_configuror(:drop,nil,nil,data_names_regexp,manifest_file_path,
-                        {:collection_or_table_names=>collection_or_table_names})
+                        {:collection_or_table_names=>collection_or_table_names, :data_only=>true})
     end
     def data_shrink(data_names_regexp=nil,collection_or_table_names=nil,manifest_file_path=nil)
       recipe_configuror(:shrink,nil,nil,data_names_regexp,manifest_file_path,
-                        {:collection_or_table_names=>collection_or_table_names})
+                        {:collection_or_table_names=>collection_or_table_names, :data_only=>true})
     end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)

@@ -1,0 +1,24 @@
+// Applies a command to all collections that name matches a particular filter
+var skipSystem = <%= skipSystem %>;
+var filter = /<%= filter %>/;
+var filterIsNegated = <%= filterIsNegated %>;
+var collectionNames = db.getCollectionNames();
+for (var i = 0; i < collectionNames.length; i++ ) {
+  var name = collectionNames[i];
+  if (!(/^system/).test(name) || !skipSystem) {
+    var collection = null;
+    if (filter.test(name)) {
+      if (!filterIsNegated) {
+        collection=db.getCollection(name);
+      }
+    } else {
+      if (filterIsNegated) {
+        collection=db.getCollection(name);
+      }
+    }
+    if (collection) {
+       print("Applying to " + collection.getName());
+       <%= cmd %>
+    }
+  }
+}

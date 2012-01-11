@@ -3,6 +3,7 @@ require "interact"
 require 'tempfile'
 require 'tmpdir'
 require 'pathname'
+require 'erb'
 
 module VMC
   module KNIFE
@@ -108,6 +109,7 @@ module VMC
         #/home/ubuntu/cloudfoundry/.deployments/intalio_devbox/deploy/mongodb/bin/mongo 127.0.0.1:25003/db 
         #-u c417f26c-6f49-4dd5-a208-216107279c7a -p 8ab08355-6509-48d5-974f-27c853b842f5
         # Todo: compute the mongoshell path (?)
+        exec_name ||= 'mongo'
         mongo_shell=get_mongo_exec(exec_name)
         if exec_name == 'mongo'
           db_arg = "/#{credentials_hash['db']}"
@@ -148,7 +150,8 @@ module VMC
       end
     end
     
-    def self.get_mongo_exec(exec_name='mongo')
+    def self.get_mongo_exec(exec_name=nil)
+      exec_name||='mongo'
       mongo_bin_folder=File.dirname(get_mongodb_node_config()['mongod_path'])
       File.join(mongo_bin_folder,exec_name)
     end
@@ -475,8 +478,35 @@ module VMC
           puts cmd
           puts `#{cmd}`
         elsif is_mongodb
+          # generate the command file from the erb template.
+          filter = ".*"
+          filterIsNegated = "false";
+          skipSystem = "true";
+          if collection_or_table_names
+            if collection_or_table_names.start_with?('!')
+              filterIsNegated = "true";
+              filter = collection_or_table_names[1..-1]
+            else
+              filter = collection_or_table_names
+            end
+          end
+          # this command is applied to each collection.
+          # the name of the variable is 'collection' as can bee seen in the erb file.
+          cmd="collection.drop();"
+          
+          file = Tempfile.new('dropcollections')
+          begin
+            File.open(file.path, 'w') do |f2|
+              template = ERB.new File.new("#{VMCKNIFE::ROOT_REL}/vmc_knife/mongo/mongo_cmd.js.erb").read, nil, "%"
+              f2.puts template.result(binding)
+            end
+            puts shell(file.path)
+          ensure
+            file.unlink   # deletes the temp file
+          end
+          
           #TODO: iterate over the collections and drop them according to the filter.
-          raise "TODO: Unsupported operation 'drop' for the data-service #{name()}"
+          #raise "TODO: Unsupported operation 'drop' for the data-service #{name()}"
         else
           puts "Unsupported operation 'drop' for the data-service #{name()}"
         end
