@@ -25,13 +25,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
     when 'expand-manifest'
       usage('vmc_knife expand-manifest <path_to_json_manifest> <path_to_destination_expanded_manifest>')
       @args.shift # consumes the argument.
-      if @args.size == 1
-        set_cmd(:knife, :expand_manifest, 1)
-      elsif @args.size == 2
-        set_cmd(:knife, :expand_manifest, 2)
-      else
-        set_cmd(:knife, :expand_manifest)
-      end
+      set_cmd(:knife, :expand_manifest, @args.size)
     when 'login', 'target'
       usage('vmc_knife login [<path_to_json_manifest>]')
       @args.shift # consumes the argument.
@@ -137,7 +131,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :delete_all, @args.size) # too many
       end
     when 'data-shell','psql','mongo'
-      usage('vmc_knife data-shell [<data-service-name>] [<app-name>]')
+      usage('vmc_knife data-shell [<data-service-name>] [<app-name>] [<cmd-file> or <quoted-cmd>]')
       @args.shift # consumes the argument.
       if @args.size <= 2
         set_cmd(:knifeapps, :data_shell, @args.size)

@@ -38,17 +38,20 @@ module VMC::Cli::Command
     include VMC::KNIFE::Cli
     
     # expands the json manifest. outputs it in the destination path.
-    def expand_manifest(manifest_file_path, destination=nil)
+    
+    def expand_manifest(manifest_file_path=ENV['VMC_KNIFE_DEFAULT_RECIPE'], destination=nil)
       res = VMC::KNIFE::JSON_EXPANDER.expand_json manifest_file_path
-      if destination.nil?
-        noextension = File.basename(manifest_file_path, File.extname(manifest_file_path))
-        destination = File.join File.dirname(manifest_file_path), "#{noextension}.expanded.json"
+      if destination
+        display "Expanding the manifest #{manifest_file_path} into #{destination}"
+        if VMC::Cli::Config.trace
+          display JSON.pretty_generate(res)
+        end
+        File.open(destination, 'w') {|f| f.write(JSON.pretty_generate(res)) }
+      else
+        STDERR.puts "Expanding the manifest #{manifest_file_path}"
+        STDOUT.puts JSON.pretty_generate(res) 
       end
-      display "Expanding the manifest #{manifest_file_path} into #{destination}"
-      if VMC::Cli::Config.trace
-        display JSON.pretty_generate(res)
-      end
-      File.open(destination, 'w') {|f| f.write(JSON.pretty_generate(res)) }
+      
     end
     
     # updates the cloud_controller
@@ -194,12 +197,12 @@ module VMC::Cli::Command
     # nil means all apps for all recipes found in the manifest are configured.
     # @param recipes The list of recipes: nil: search the apps in all recipes
     # @param app_role_names The names of the apps in each recipe; nil: configure all apps found.
-    def configure(recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil)
+    def configure(recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)
       man = load_manifest(manifest_file_path)
       recipes_regexp = as_regexp(recipes_regexp)
       app_names_regexp = as_regexp(app_names_regexp)
       service_names_regexp = as_regexp(service_names_regexp)
-      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp)
+      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp,opts)
       if VMC::Cli::Config.trace
         display "Pending updates"
         display JSON.pretty_generate(configurer.updates_pending)
@@ -226,9 +229,18 @@ module VMC::Cli::Command
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
     end
-    def data_shell(data_names_regexp=nil,manifest_file_path=nil)
+    def data_shell(data_names_regexp=nil,file_or_cmd=nil,manifest_file_path=nil)
+      file_name = nil
+      cmd = nil
+      if file_or_cmd
+        if File.exist? file_or_cmd
+          file_name = file_or_cmd
+        else
+          cmd = cmd[1..-1] if cmd.start_with?('"') || cmd.start_with?("'")
+        end
+      end
       recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path,
-                        {:data_only=>true})
+                        {:file_name=>file_name, :data_cmd=>cmd, :app_name=>app_name, :data_only=>true})
     end
     def data_credentials(data_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:credentials,nil,nil,data_names_regexp,manifest_file_path,

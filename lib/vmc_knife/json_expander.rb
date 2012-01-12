@@ -35,11 +35,11 @@ module VMC
         ip = ip_mask[0]
         mask = ip_mask[1]
         ip_segs = ip.split('.')
-        if mask == "255.255.255.0"
+        if mask.start_with? "255.255.255."
           ip_segs[3]
-        elsif mask == "255.255.0.0"
+        elsif mask.start_with? "255.255"
           "#{ip_segs[2]}-#{ip_segs[3]}"
-        elsif mask == "255.0.0.0"
+        elsif mask.start_with? "255."
           "#{ip_segs[1]}-#{ip_segs[2]}-#{ip_segs[3]}"
         else
           #hum why are we here?
