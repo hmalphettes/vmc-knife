@@ -173,9 +173,14 @@ module VMC
     
     class RecipesConfigurationApplier
       def shell()
+        app_name = @opts[:app_name] if @opts
+        file_name = @opts[:file_name] if @opts
+        data_cmd = @opts[:data_cmd] if @opts
+        if data_cmd
+          file_name = data_cmd
+        end
         @data_services.each do |data_service|
-          app_name = opts()[:app_name] if opts()
-          data_service.shell(app_name)
+          data_service.shell(file_name)
         end
       end
       def credentials()
@@ -421,7 +426,10 @@ module VMC
           cmd_acl="GRANT CREATE ON SCHEMA PUBLIC TO PUBLIC;\
           GRANT ALL ON ALL TABLES IN SCHEMA PUBLIC TO PUBLIC;\
           GRANT ALL ON ALL FUNCTIONS IN SCHEMA PUBLIC TO PUBLIC;\
-          GRANT ALL ON ALL SEQUENCES IN SCHEMA PUBLIC TO PUBLIC;"
+          GRANT ALL ON ALL SEQUENCES IN SCHEMA PUBLIC TO PUBLIC;\
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO PUBLIC;\
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO PUBLIC;\
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO PUBLIC;"
           shell(cmd_acl,true)
         end
       end

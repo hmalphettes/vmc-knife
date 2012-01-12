@@ -236,6 +236,7 @@ module VMC::Cli::Command
         if File.exist? file_or_cmd
           file_name = file_or_cmd
         else
+          cmd = file_or_cmd
           cmd = cmd[1..-1] if cmd.start_with?('"') || cmd.start_with?("'")
         end
       end
