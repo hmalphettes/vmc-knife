@@ -229,7 +229,7 @@ module VMC::Cli::Command
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
     end
-    def data_shell(data_names_regexp=nil,file_or_cmd=nil,manifest_file_path=nil)
+    def data_shell(data_names_regexp=nil,file_or_cmd=nil,app_name=nil,manifest_file_path=nil)
       file_name = nil
       cmd = nil
       if file_or_cmd
