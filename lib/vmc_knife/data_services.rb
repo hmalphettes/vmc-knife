@@ -119,7 +119,6 @@ module VMC
           db_arg = "--db #{credentials_hash['db']}"
         end
         cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}#{db_arg}"
-        puts "Executing #{cmd}"
         if commands_file
           if mongo_shell == 'mongo'
             if File.exists? commands_file
@@ -129,8 +128,11 @@ module VMC
               commands_file = "--eval \"#{commands_file}\""
             end
           end
-          `#{cmd} #{commands_file}`
+          the_cmd = "#{cmd} #{commands_file}"
+          puts "#{the_cmd}" if VMC::Cli::Config.trace
+          puts `#{the_cmd}`
         else
+          puts "#{cmd}" if VMC::Cli::Config.trace
           # Replaces the current process.
           exec cmd
         end
@@ -142,8 +144,11 @@ module VMC
           else
             commands_file = "-c \"#{commands_file}\" #{PSQL_RAW_RES_ARGS}"
           end
-          `#{cmd} #{commands_file}`
+          the_cmd = "#{cmd} #{commands_file}"
+          puts "#{the_cmd}" if VMC::Cli::Config.trace
+          puts `#{the_cmd}`
         else
+          puts "#{cmd}" if VMC::Cli::Config.trace
           # Replaces the current process.
           exec cmd
         end
