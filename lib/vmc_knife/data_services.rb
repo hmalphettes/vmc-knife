@@ -103,7 +103,7 @@ module VMC
     end
     
     # command_files or command.
-    def self.data_service_console(credentials_hash, commands_file="",as_admin=false,exec_name=nil)
+    def self.data_service_console(credentials_hash, commands_file="",as_admin=false,exec_name=nil,return_value=false)
       if credentials_hash['db'] #so far it has always been equal to 'db'
         # It is a mongo service
         #/home/ubuntu/cloudfoundry/.deployments/intalio_devbox/deploy/mongodb/bin/mongo 127.0.0.1:25003/db 
@@ -146,6 +146,7 @@ module VMC
           end
           the_cmd = "#{cmd} #{commands_file}"
           puts "#{the_cmd}" if VMC::Cli::Config.trace
+          return `#{the_cmd}` if return_value
           puts `#{the_cmd}`
         else
           puts "#{cmd}" if VMC::Cli::Config.trace
@@ -242,8 +243,8 @@ module VMC
       end
       
       # Connect to the mongo js shell or the psql shell.
-      def shell(commands_file=nil,as_admin=false)
-        VMC::KNIFE.data_service_console(credentials(),commands_file,as_admin)
+      def shell(commands_file=nil,as_admin=false,return_value=false)
+        VMC::KNIFE.data_service_console(credentials(),commands_file,as_admin,nil,return_value)
       end
       
       def import(app_name=nil,file=nil)
@@ -424,9 +425,12 @@ module VMC
       
       # Make sure that all users who can connect to the DB can also access
       # the tables.
-      # This workarounds the privilege issue reported here:
+      # This workarounds the privilege issue reported .... and was added to "my"
+      # branch of vcap's services 
       # 
-      def apply_privileges()
+      # Another workaround though really not perfect so it will stay in vmc_knife:
+      # the ownership of the SQL functions.
+      def apply_privileges(app_name=nil)
         if is_postgresql()
           cmd_acl="GRANT CREATE ON SCHEMA PUBLIC TO PUBLIC;\
           GRANT ALL ON ALL TABLES IN SCHEMA PUBLIC TO PUBLIC;\
@@ -435,7 +439,26 @@ module VMC
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO PUBLIC;\
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO PUBLIC;\
           ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO PUBLIC;"
-          shell(cmd_acl,true)
+#          shell(cmd_acl,true)
+          
+          # reset the owner of the functions to the current user
+          # when there is a 'privileged' app.
+          app_name ||= @wrapped['director']['bound_app'] if @wrapped['director']
+          if app_name
+            cmd_select_fcts="SELECT pg_proc.proname FROM pg_catalog.pg_proc WHERE \
+     pg_proc.pronamespace=(SELECT pg_namespace.oid FROM pg_catalog.pg_namespace WHERE pg_namespace.nspname = 'public') \
+ AND pg_proc.proowner!=(SELECT oid FROM pg_roles WHERE rolname = 'postgres')"
+            current_owner=credentials()['username']
+            fcts_name=shell(cmd_select_fcts,true,true)
+            fcts = fcts_name.split("\n").collect do |line|
+              line.strip!
+              "'#{line}'"
+            end.join(',')
+            cmd_change_fcts_owner="UPDATE pg_catalog.pg_proc \
+                SET proowner = (SELECT oid FROM pg_roles WHERE rolname = '#{current_owner}')\
+                WHERE pg_proc.proname IN (#{fcts})"
+            puts `sudo -u postgres psql --dbname #{credentials()['name']} -c \"#{cmd_change_fcts_owner}\" #{PSQL_RAW_RES_ARGS}`
+          end
         end
       end
       
@@ -529,7 +552,7 @@ module VMC
           puts "Unsupported operation 'drop' for the data-service #{name()}"
         end
       end
-                                                                                                                                        
+
     end
     
   end
