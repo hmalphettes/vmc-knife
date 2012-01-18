@@ -247,6 +247,24 @@ module VMC
              @application_updaters[application.name] = application_updater
              updates = application_updater.updates_pending
              applications_updates[application.name] = updates if updates
+             # if we did bind to a database; let's re-assign the ownership of the sql functions
+             # to the favorite app if there is such a thing.
+             if updates && updates['services'] && updates['services']['add']
+               puts "THE ONE WE ARE DEBUGGING #{JSON.pretty_generate updates['services']}"
+               list_services_name=updates['services']['add']
+               list_services_name.each do |cf_service_name|
+                 @data_services.each do |data_service|
+                   if data_service.name == cf_service_name
+                     # is this the privileged app?
+                     priv_app_name = data_service.wrapped['director']['bound_app'] if data_service.wrapped['director']
+                     if priv_app_name == application.name
+                       puts "GOT THE PRIVILEGED APP #{application.name} for the service #{data_service.role_name}"
+                       data_service.apply_privileges(priv_app_name)
+                     end
+                   end
+                 end
+               end
+             end
            end
         end
         res['services'] = data_services_updates unless data_services_updates.empty?
@@ -422,6 +440,7 @@ module VMC
             puts "Updating #{@application_json['name']} with #{updated_manifest.inspect}"
             @client.update_app(@application_json['name'], updated_manifest)
           end
+                    
         end
       end
       
@@ -515,6 +534,11 @@ module VMC
         new_app_manifest['uris'] = @application_json['uris'] unless @application_json['uris'].nil?
         new_app_manifest['services'] = @application_json['services'] unless @application_json['services'].nil?
         new_app_manifest['env'] = @application_json['env'] unless @application_json['env'].nil?
+        if @application_json['meta']
+          new_app_manifest['meta'] = Hash.new if new_app_manifest['meta'].nil?
+          new_app_manifest['meta']['debug'] = @application_json['meta']['debug'] if @application_json['meta']['debug']
+          new_app_manifest['meta']['restage_on_service_change'] = @application_json['meta']['restage_on_service_change'] if @application_json['meta']['restage_on_service_change']
+        end
         new_app_manifest
       end
       
@@ -524,6 +548,7 @@ module VMC
         services = update_services_pending()
         env = update_env_pending()
         memory = update_memory_pending()
+        meta = meta_pending()
         uris = update_uris_pending()
         updates = Hash.new
         updates['name'] = name if name
@@ -531,6 +556,7 @@ module VMC
         updates['env'] = env if env
         updates['uris'] = uris if uris
         updates['memory'] = memory if memory
+        updates['meta'] = meta if meta
         updates unless updates.empty?
       end
       
@@ -568,8 +594,8 @@ module VMC
           stack_change "#{old_stack} => #{new_stack}"
         end
         return if model_change.nil? && stack_change.nil?
-        return { "stack" => stack_change } if model_change.empty?
-        return { "model" => model_change } if stack_change.empty?
+        return { "stack" => stack_change } if model_change.nil?
+        return { "model" => model_change } if stack_change.nil?
         return { "stack" => stack_change, "model" => model_change }
       end
       def update_services_pending()
@@ -586,6 +612,25 @@ module VMC
         old_services = current[:uris] || current['uris']
         new_services = @application_json['uris']
         diff_lists(old_services,new_services)
+      end
+      # only look for debug and restage_on_service_change
+      def meta_pending()
+        old_meta = current[:meta] || current['meta']
+        new_meta = @application_json['meta']
+        old_debug = old_meta[:debug] || old_meta['debug']
+        new_debug = new_meta['debug']
+        debug_change = "#{old_debug} => #{new_debug}" if old_debug != new_debug
+        
+        old_restage_on_service_change = old_meta[:restage_on_service_change]
+        old_restage_on_service_change = old_meta['restage_on_service_change'] unless old_restage_on_service_change == false
+        old_restage_on_service_change = old_restage_on_service_change.to_s unless old_restage_on_service_change.nil?
+        new_restage_on_service_change = new_meta['restage_on_service_change']
+        restage_on_service_change_change = "#{old_restage_on_service_change} => #{new_restage_on_service_change}" if old_restage_on_service_change != new_restage_on_service_change
+        
+        return if debug_change.nil? && restage_on_service_change_change.nil?
+        return { "debug" => debug_change } if restage_on_service_change_change.nil?
+        return { "restage_on_service_change" => restage_on_service_change_change } if debug_change.nil?
+        return { "debug" => debug_change, "restage_on_service_change" => restage_on_service_change_change }
       end
       def diff_lists(old_services,new_services)
         new_services ||= Array.new
