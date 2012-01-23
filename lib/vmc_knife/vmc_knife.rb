@@ -615,8 +615,8 @@ module VMC
       end
       # only look for debug and restage_on_service_change
       def meta_pending()
-        old_meta = current[:meta] || current['meta']
-        new_meta = @application_json['meta']
+        old_meta = current[:meta] || current['meta'] || {}
+        new_meta = @application_json['meta'] || {}
         old_debug = old_meta[:debug] || old_meta['debug']
         new_debug = new_meta['debug']
         debug_change = "#{old_debug} => #{new_debug}" if old_debug != new_debug
