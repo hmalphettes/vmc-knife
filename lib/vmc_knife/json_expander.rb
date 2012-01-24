@@ -8,27 +8,28 @@ module VMC
       # Reads the ip of a given interface and the mask
       # defaults on eth0 then on wlan0 and then whatever it can find that is not 127.0.0.1
       def self.ip_auto(interface='eth0')
-        res=`ifconfig | sed -n '/#{interface}/{n;p;}' | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
+        ifconfig = File.exist? "/sbin/ifconfig" ? "/sbin/ifconfig" : "ifconfig"
+        res=`#{ifconfig} | sed -n '/#{interface}/{n;p;}' | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
         if interface == 'eth0' && (res.nil? || res.strip.empty?)
           res = ip_auto "wlan0"
           res = res[0] if res
           if res.strip.empty?
             #nevermind fetch the first IP you can find that is not 127.0.0.1
-            res=`ifconfig | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
+            res=`#{ifconfig} | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
           end
         end
         res.strip! if res
         unless res.empty?
           # gets the Mask
-          line=`ifconfig | grep 'inet addr:#{res}' | awk '{ print $1}' | head -1`
+          line=`#{ifconfig} | grep 'inet addr:#{res}' | awk '{ print $1}' | head -1`
 #          puts "parsing ip and mask in line #{line}"
-          mask=`ifconfig | grep 'inet addr:#{res}' | grep -v '127.0.0.1' | cut -d: -f4 | awk '{ print $1}' | head -1`
+          mask=`#{ifconfig} | grep 'inet addr:#{res}' | grep -v '127.0.0.1' | cut -d: -f4 | awk '{ print $1}' | head -1`
           mask.strip!
 #          puts "got ip #{res} and mask #{mask}"
           return [ res, mask ]
         end
       end
-    
+      
       # Derive a seed guaranteed unique on the local network  according to the IP.
       def self.ip_seed()
         ip_mask=ip_auto()
