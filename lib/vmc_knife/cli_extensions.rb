@@ -186,8 +186,32 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :data_export, @args.size) # too many
       end
+    when 'logs','logs-all'
+      usage('vmc_knife logs')
+      @args.shift # consumes the argument.
+      if @args.size <= 3
+        set_cmd(:knifeapps, :logs_all, @args.size)
+      else
+        set_cmd(:knifeapps, :logs_all, @args.size) # too many
+      end
+    when 'logs','logs-apps'
+      usage('vmc_knife logs-apps')
+      @args.shift # consumes the argument.
+      if @args.size <= 3
+        set_cmd(:knifeapps, :logs_apps, @args.size)
+      else
+        set_cmd(:knifeapps, :logs_apps, @args.size) # too many
+      end
+    when 'logs','logs-vcap'
+      usage('vmc_knife logs-vcap')
+      @args.shift # consumes the argument.
+      if @args.size <= 3
+        set_cmd(:knifeapps, :logs_vcap, @args.size)
+      else
+        set_cmd(:knifeapps, :logs_vcap, @args.size) # too many
+      end
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-all/apps/vcap [<manifest_path>]"
     else
       super
     end

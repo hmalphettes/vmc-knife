@@ -147,6 +147,24 @@ module VMC
         @wrapped
       end
       
+      # look for the log folder of the deployed app.
+      # making the assumption we are on the same file system.
+      # will use the paas APIs later.
+      def log(folder)
+        deployed_apps_folder="#{ENV['HOME']}/cloudfoundry/deployed_apps"
+        if File.exist?(deployed_apps_folder)
+          folder_nb=0
+          Dir.glob(File.join(deployed_apps_folder, "#{name()}-*")).each do |dir|
+            fname="#{File.basename(dir)}"
+            app_log_folder=File.join(folder,fname)
+            FileUtils.mkdir_p(app_log_folder)
+            if File.exist? "#{dir}/logs"
+              FileUtils.cp(Dir.glob(File.join("#{dir}/logs", "*")), app_log_folder)
+            end
+          end
+        end
+      end
+      
     end
     
     # Read/Write the application environment. a list of strings
@@ -313,6 +331,38 @@ module VMC
         @application_updaters.each do |name,application_updater|
           application_updater.execute
         end
+      end
+      def logs()
+        output_file=@opts[:output_file] if @opts
+        name="cflogs-#{Time.now.strftime("%Y%m%d-%H%M")}"
+        output_file||="#{name}.zip"
+        output_folder="/tmp/#{name}"
+        FileUtils.rm_rf(output_folder) if File.exist? output_folder
+        FileUtils.mkdir(output_folder)
+        log_apps=@opts[:log_apps] if @opts
+        log_vcap=@opts[:log_vcap] if @opts
+        log_apps||=false
+        log_vcap||=false
+        if log_apps
+          FileUtils.mkdir(File.join(output_folder, 'apps'))
+          @applications.each do |application|
+            application.log(File.join(output_folder, 'apps'))
+          end
+        end
+        if log_vcap
+          if ENV['CLOUD_FOUNDRY_CONFIG_PATH'] && File.exist?(ENV['CLOUD_FOUNDRY_CONFIG_PATH'])
+            vcap_log_folder = File.join(File.dirname(ENV['CLOUD_FOUNDRY_CONFIG_PATH']), "log")
+          else
+            puts "Can't find the log folder for vcap, the environment variable CLOUD_FOUNDRY_CONFIG_PATH is not defined."
+          end
+          if File.exist? vcap_log_folder
+            FileUtils.mkdir(File.join(output_folder, 'vcap'))
+            FileUtils.cp_r Dir.glob(File.join(vcap_log_folder,"*")), File.join(output_folder, 'vcap')
+          end
+        end
+        curr_dir=Dir.pwd
+        `cd #{File.dirname(output_folder)}; zip -r #{output_file} #{File.basename(output_folder)}; mv #{output_file} #{curr_dir}`
+        `rm -rf #{output_folder}`
       end
     end
     class DataServiceManifestApplier

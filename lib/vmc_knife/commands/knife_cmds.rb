@@ -267,6 +267,18 @@ module VMC::Cli::Command
       recipe_configuror(:shrink,nil,nil,data_names_regexp,manifest_file_path,
                         {:collection_or_table_names=>collection_or_table_names, :data_only=>true})
     end
+    def logs_all(app_names_regexp=nil, manifest_file_path=nil)
+      recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :log_apps=>true, :log_vcap=>true})
+    end
+    def logs_apps(app_names_regexp=nil, manifest_file_path=nil)
+      recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :log_apps=>true, :log_vcap=>false})
+    end
+    def logs_vcap(app_names_regexp=nil, manifest_file_path=nil)
+      recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :log_apps=>false, :log_vcap=>true})
+    end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)
       man = load_manifest(manifest_file_path)
