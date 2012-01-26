@@ -8,7 +8,7 @@ module VMC
       # Reads the ip of a given interface and the mask
       # defaults on eth0 then on wlan0 and then whatever it can find that is not 127.0.0.1
       def self.ip_auto(interface='eth0')
-        ifconfig = File.exist? "/sbin/ifconfig" ? "/sbin/ifconfig" : "ifconfig"
+        ifconfig = File.exist?("/sbin/ifconfig") ? "/sbin/ifconfig" : "ifconfig"
         res=`#{ifconfig} | sed -n '/#{interface}/{n;p;}' | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}' | head -1`
         if interface == 'eth0' && (res.nil? || res.strip.empty?)
           res = ip_auto "wlan0"
