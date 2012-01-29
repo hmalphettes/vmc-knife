@@ -75,6 +75,8 @@ module VMC::Cli::Command
         man = load_manifest(nil)
         uri = man['target']
       end
+      # if there is a port remove it.
+      uri = uri.split(':')[0] if uri
       update_aliases = VMC::KNIFE::VCAPUpdateAvahiAliases.new(nil,man,client,/.*/)
       update_hosts = VMC::KNIFE::VCAPUpdateEtcHosts.new(uri,manifest_file_path,client)
       update_hosts.set_all_uris(update_aliases.all_uris)
@@ -129,6 +131,8 @@ module VMC::Cli::Command
         uri = man['target']
       end
       raise "No uri defined" unless uri
+      # if there is a port remove it.
+      uri = uri.split(':')[0]
       update_cc = _class.new(uri,config)
       if update_cc.update_pending()
         display "Configuring #{msg_label} with uri: #{uri}" if VMC::Cli::Config.trace

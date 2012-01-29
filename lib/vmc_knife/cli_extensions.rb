@@ -187,14 +187,14 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
         set_cmd(:knifeapps, :data_export, @args.size) # too many
       end
     when 'logs','logs-all'
-      usage('vmc_knife logs')
+      usage('vmc_knife logs-all')
       @args.shift # consumes the argument.
       if @args.size <= 3
         set_cmd(:knifeapps, :logs_all, @args.size)
       else
         set_cmd(:knifeapps, :logs_all, @args.size) # too many
       end
-    when 'logs','logs-apps'
+    when 'logs-apps'
       usage('vmc_knife logs-apps')
       @args.shift # consumes the argument.
       if @args.size <= 3
@@ -202,7 +202,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :logs_apps, @args.size) # too many
       end
-    when 'logs','logs-vcap'
+    when 'logs-vcap'
       usage('vmc_knife logs-vcap')
       @args.shift # consumes the argument.
       if @args.size <= 3
