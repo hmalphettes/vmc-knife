@@ -796,6 +796,10 @@ module VMC
         uris_arr.push @uri unless @uri.nil?
         uris_arr.sort!
         uris_arr.uniq!
+        # filter out the local uris: we rely on mdns for them.
+        #uris_arr.delete_if do |u| u =~ /\.local$/ end
+        # for now only filter the local url with a '-'
+        uris_arr.delete_if do |u| u =~ /-.*\.local$/ end
         @uri = uris_arr.join(' ')
       end
       def update_pending()
