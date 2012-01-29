@@ -334,9 +334,22 @@ module VMC
       end
       def logs()
         output_file=@opts[:output_file] if @opts
-        name="cflogs-#{Time.now.strftime("%Y%m%d-%H%M")}"
+        puts "Hello #{@root.wrapped['logs']}"
+        if @root.wrapped['logs']
+          man_logs=@root.wrapped['logs']
+          name_prefix=man_logs['prefix']
+          parent_output_folder=man_logs['destination']
+          if parent_output_folder
+            FileUtils.mkdir_p parent_output_folder
+            logs_base_url=man_logs['logs_base_url']
+            # TODO: clean the old files and folders if there are too many of them.
+          end
+        end
+        name_prefix||="cflogs-"
+        parent_output_folder||="/tmp"
+        name="#{name_prefix}#{Time.now.strftime("%Y%m%d-%H%M")}"
         output_file||="#{name}.zip"
-        output_folder="/tmp/#{name}"
+        output_folder="#{parent_output_folder}/#{name}"
         FileUtils.rm_rf(output_folder) if File.exist? output_folder
         FileUtils.mkdir(output_folder)
         log_apps=@opts[:log_apps] if @opts
@@ -361,8 +374,22 @@ module VMC
           end
         end
         curr_dir=Dir.pwd
-        `cd #{File.dirname(output_folder)}; zip -r #{output_file} #{File.basename(output_folder)}; mv #{output_file} #{curr_dir}`
-        `rm -rf #{output_folder}`
+        destination=parent_output_folder||curr_dir
+        copy_or_move=("/tmp" == parent_output_folder)?"mv":"cp"
+        if "/tmp" == parent_output_folder
+          puts "Generating a zip of the logs as #{curr_dir}/#{output_file}"
+        else
+          if logs_base_url
+            hostname=`hostname`.strip
+            puts "Logs available at http://#{hostname}.local#{logs_base_url}/#{name} and in the current directory."
+          end
+        end
+        `cd #{File.dirname(output_folder)}; zip -r #{output_file} #{File.basename(output_folder)}; #{copy_or_move} #{output_file} #{curr_dir}`
+        if "/tmp" == parent_output_folder
+          `rm -rf #{output_folder}`
+        else
+          `mv #{parent_output_folder}/#{output_file} #{parent_output_folder}/#{name}`
+        end
       end
     end
     class DataServiceManifestApplier
