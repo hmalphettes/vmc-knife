@@ -360,10 +360,19 @@ module VMC
             extension = @wrapped['director']['file_extension'] if @wrapped['director']
             extension ||= "sql"
             file = "#{name()}.#{extension}"
+          else
+            unless File.exists?(File.dirname(file))
+              STDERR.puts "The output folder #{File.dirname(file)} does not exist."
+              exit 1
+            end
           end
           archive_unzipped=file
           archive_unzipped="#{name()}.sql" unless /\.sql$/ =~ extension
           `touch #{archive_unzipped}`
+          unless File.exists? archive_unzipped
+            STDERR.puts "Unable to create the file #{archive_unzipped}"
+            exit 1
+          end
           `chmod o+w #{archive_unzipped}`
           puts "Exports the database #{credentials(app_name)['name']} in #{file}"
           #sudo -u postgres env PGPASSWORD=intalio DBNAME=intalio DUMPFILE=intalio_dump.sql pg_dump --format=p --file=$DUMPFILE --no-owner --clean --blobs --no-acl --oid --no-tablespaces $DBNAME
@@ -372,6 +381,11 @@ module VMC
           cmd = VMC::KNIFE.pg_connect_cmd(credentials(app_name), 'pg_dump', false, "--format=p --file=#{archive_unzipped} --no-owner --clean --oids --blobs --no-acl --no-privileges --no-tablespaces")
           puts cmd
           puts `#{cmd}`
+          
+          unless File.exists? file
+            STDERR.puts "Unable to read the file #{file}"
+            exit 1
+          end
           `chmod o-w #{file}`
         elsif is_mongodb
           if file.nil?
@@ -449,6 +463,10 @@ module VMC
      pg_proc.pronamespace=(SELECT pg_namespace.oid FROM pg_catalog.pg_namespace WHERE pg_namespace.nspname = 'public') \
  AND pg_proc.proowner!=(SELECT oid FROM pg_roles WHERE rolname = 'postgres')"
             current_owner=credentials()['username']
+            unless current_owner
+              STDERR.puts "The application #{app_name} is not bound to the data-service #{name}; not applying the database privileges."
+              return
+            end
             fcts_name=shell(cmd_select_fcts,true,true)
             fcts = fcts_name.split("\n").collect do |line|
               line.strip!
