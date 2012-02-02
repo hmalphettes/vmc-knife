@@ -283,6 +283,11 @@ module VMC::Cli::Command
       recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
                         {:apps_only=>true, :log_apps=>false, :log_vcap=>true})
     end
+    def logs_less(app_names_regexp=nil, log_files_glob=nil, manifest_file_path=nil)
+      recipe_configuror(:logs_shell,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :log_apps=>true, :log_vcap=>false, :logs_shell=>"less",
+                         :log_files_glob=>log_files_glob})
+    end
     
     def recipe_configuror(method_sym_name,recipes_regexp=nil,app_names_regexp=nil,service_names_regexp=nil,manifest_file_path=nil,opts=nil)
       man = load_manifest(manifest_file_path)

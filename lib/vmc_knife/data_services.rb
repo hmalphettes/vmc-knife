@@ -362,16 +362,14 @@ module VMC
             file = "#{name()}.#{extension}"
           else
             unless File.exists?(File.dirname(file))
-              STDERR.puts "The output folder #{File.dirname(file)} does not exist."
-              exit 1
+              raise "The output folder #{File.dirname(file)} does not exist."
             end
           end
           archive_unzipped=file
           archive_unzipped="#{name()}.sql" unless /\.sql$/ =~ extension
           `touch #{archive_unzipped}`
           unless File.exists? archive_unzipped
-            STDERR.puts "Unable to create the file #{archive_unzipped}"
-            exit 1
+            raise "Unable to create the file #{archive_unzipped}"
           end
           `chmod o+w #{archive_unzipped}`
           puts "Exports the database #{credentials(app_name)['name']} in #{file}"
@@ -383,8 +381,7 @@ module VMC
           puts `#{cmd}`
           
           unless File.exists? file
-            STDERR.puts "Unable to read the file #{file}"
-            exit 1
+            raise "Unable to read the file #{file}"
           end
           `chmod o-w #{file}`
         elsif is_mongodb
