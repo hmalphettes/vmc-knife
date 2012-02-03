@@ -857,14 +857,32 @@ module VMC
     # This is really a server-side feature.
     # Replace the 127.0.0.1 localhost #{old_uri} with the new uri
     class VCAPUpdateEtcHosts
+      # uri the uris (hostname) to set.
+      # accepted type for uri: space separated list; array of strings;
+      # port appended to the hostname are also tolerated and will be stripped out.
       def initialize(uri, etc_hosts_path=nil,man=nil)
         @config = etc_hosts_path
         @config ||="/etc/hosts"
-        @uri = uri
+        if uri
+          if uri.kind_of? String
+            uris_arr = uri.split(' ')
+            set_all_uris(uris_arr)
+          elsif uri.kind_of? Array
+            set_all_uris(uri)
+          end
+        end
         raise "The config file #{@config} does not exist." unless File.exists? @config
       end
       def set_all_uris(uris_arr)
-        uris_arr.push @uri unless @uri.nil?
+        if @uri
+          if @uri.kind_of? String
+            uris_arr.push @uri
+          elsif @uri.kind_of? Array
+            uris_arr = @uri + uris_arr
+          end
+        end
+        #remove the port if there is one.
+        uris_arr.collect! do |u| u.split(':')[0] end
         uris_arr.sort!
         uris_arr.uniq!
         # filter out the local uris: we rely on mdns for them.
