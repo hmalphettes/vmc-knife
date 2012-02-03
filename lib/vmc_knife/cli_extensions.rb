@@ -210,21 +210,21 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :logs_vcap, @args.size) # too many
       end
-    when 'logs-less','logs-shell'
-      usage('vmc_knife logs-less <application name>')
+    when 'less','logs-less','logs-shell'
+      usage('vmc_knife less <application name>')
       @args.shift # consumes the argument.
-      if @args.size <= 3
-        set_cmd(:knifeapps, :logs_less, @args.size)
-      else
-        set_cmd(:knifeapps, :logs_less, @args.size) # too many
-      end
+      set_cmd(:knifeapps, :logs_less, @args.size)
+    when 'tail','logs-tail'
+      usage('vmc_knife tail <application name>')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :logs_tail, @args.size)
     when 'update-self'
       usage('vmc_knife update-self')
       puts "Updating vmc-knife"
       `cd /tmp; [ -d "vmc-knife" ] && rm -rf vmc-knife; git clone https://github.com/hmalphettes/vmc-knife.git; cd vmc-knife; gem build vmc_knife.gemspec; gem install vmc_knife`
       exit 0
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|logs-all/apps/vcap|update-self [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
     else
       super
     end
