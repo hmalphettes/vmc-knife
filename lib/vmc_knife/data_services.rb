@@ -309,7 +309,7 @@ module VMC
           else
             file = basename
           end
-            
+          
           if is_postgresql
             p "chmod o+w #{file}"
             `chmod o+w #{file}`
@@ -380,10 +380,10 @@ module VMC
           puts cmd
           puts `#{cmd}`
           
-          unless File.exists? file
-            raise "Unable to read the file #{file}"
+          unless File.exists? archive_unzipped
+            raise "Unable to read the file #{archive_unzipped}"
           end
-          `chmod o-w #{file}`
+          `chmod o-w #{archive_unzipped}`
         elsif is_mongodb
           if file.nil?
             extension = @wrapped['director']['file_extension'] if @wrapped['director']
