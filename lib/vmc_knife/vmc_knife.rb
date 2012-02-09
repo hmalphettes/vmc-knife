@@ -388,6 +388,7 @@ module VMC
             logs_base_url=man_logs['logs_base_url']
             # TODO: clean the old files and folders if there are too many of them.
           end
+          other_logs = man_logs['other_logs']
         end
         name_prefix||="cflogs-"
         parent_output_folder||="/tmp"
@@ -417,6 +418,16 @@ module VMC
             FileUtils.cp_r Dir.glob(File.join(vcap_log_folder,"*")), File.join(output_folder, 'vcap')
           end
         end
+        if other_logs
+          other_logs_dir=File.join(output_folder, 'other_logs')
+          FileUtils.mkdir other_logs_dir
+          other_logs.each do |name,glob|
+            other_dir=File.join(other_logs_dir, name)
+            FileUtils.mkdir other_dir
+            FileUtils.cp_r Dir.glob(glob), other_dir
+          end
+        end
+
         curr_dir=Dir.pwd
         destination=parent_output_folder||curr_dir
         copy_or_move=("/tmp" == parent_output_folder)?"mv":"cp"
@@ -425,7 +436,8 @@ module VMC
         else
           if logs_base_url
             hostname=`hostname`.strip
-            puts "Logs available at http://#{hostname}.local#{logs_base_url}/#{name} and in the current directory."
+            complete_base_url= logs_base_url =~ /:\/\// ? logs_base_url : "http://#{hostname}.local#{logs_base_url}"
+            puts "Logs available at #{complete_base_url}/#{name} and in #{parent_output_folder}/#{name}"
           end
         end
         `cd #{File.dirname(output_folder)}; zip -r #{output_file} #{File.basename(output_folder)}; #{copy_or_move} #{output_file} #{curr_dir}`
@@ -433,6 +445,10 @@ module VMC
           `rm -rf #{output_folder}`
         else
           `mv #{parent_output_folder}/#{output_file} #{parent_output_folder}/#{name}`
+        end
+        if logs_base_url
+          # not the most elegant code to cp then delete:
+          `rm #{output_file}` unless @opts[:output_file]
         end
       end
     end
