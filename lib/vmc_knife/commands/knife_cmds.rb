@@ -273,7 +273,7 @@ module VMC::Cli::Command
     end
     def logs_all(app_names_regexp=nil, output_file=nil, manifest_file_path=nil)
       recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
-                        {:apps_only=>true, :output_file=>output_file :log_apps=>true, :log_vcap=>true})
+                        {:apps_only=>true, :output_file=>output_file, :log_apps=>true, :log_vcap=>true})
     end
     def logs_apps(app_names_regexp=nil, manifest_file_path=nil)
       recipe_configuror(:logs,nil,app_names_regexp,nil,manifest_file_path,
