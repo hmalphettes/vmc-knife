@@ -2,10 +2,10 @@
 $:.unshift File.expand_path("../lib", __FILE__)
 
 require 'vmc_knife/version'
-
+raise 'BUILD_NUMBER undefined. Expecting the environment variable BUILD_NUMBER to contain 3 digits such as 012.' unless ENV['BUILD_NUMBER']
 spec = Gem::Specification.new do |s|
   s.name = "vmc_knife"
-  s.version = "0.0.01"
+  s.version = "0.0.#{ENV['BUILD_NUMBER']}"
   s.author = "Intalio Pte"
   s.email = "hmalphettes@gmail.com"
   s.homepage = "http://intalio.com"
