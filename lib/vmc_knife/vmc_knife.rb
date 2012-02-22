@@ -336,7 +336,7 @@ module VMC
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
           application_updater.delete
-        end
+        end 
         @data_services.each do |data_service|
           data_service_updater = DataServiceManifestApplier.new data_service, @client, @current_services, @current_services_info
           data_service_updater.delete

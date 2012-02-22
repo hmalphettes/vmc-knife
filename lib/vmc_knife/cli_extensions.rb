@@ -125,11 +125,15 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
     when 'delete-all'
       usage('vmc_knife delete-all [<applications_regexp>]')
       @args.shift # consumes the argument.
-      if @args.size <= 2
-        set_cmd(:knifeapps, :delete_all, @args.size)
-      else
-        set_cmd(:knifeapps, :delete_all, @args.size) # too many
-      end
+      set_cmd(:knifeapps, :delete_all, @args.size)
+    when 'delete-apps'
+      usage('vmc_knife delete-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :delete_apps, @args.size)
+    when 'delete-data','delete-services'
+      usage('vmc_knife delete-data [<data_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :delete_data, @args.size)
     when 'data-shell','psql','mongo'
       usage('vmc_knife data-shell [<data-service-name>] [<app-name>] [<cmd-file> or <quoted-cmd>]')
       @args.shift # consumes the argument.
@@ -173,19 +177,11 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
     when 'data-import'
       usage('vmc_knife data-import [<data-service-name>] [<archive-file-name>] [<tables-collection-regexp>]')
       @args.shift # consumes the argument.
-      if @args.size <= 3
-        set_cmd(:knifeapps, :data_import, @args.size)
-      else
-        set_cmd(:knifeapps, :data_import, @args.size) # too many
-      end
+      set_cmd(:knifeapps, :data_import, @args.size)
     when 'data-export'
       usage('vmc_knife data-export [<data-service-name>] [<archive-file-name>] [<tables-collection-regexp>]')
       @args.shift # consumes the argument.
-      if @args.size <= 3
-        set_cmd(:knifeapps, :data_export, @args.size)
-      else
-        set_cmd(:knifeapps, :data_export, @args.size) # too many
-      end
+      set_cmd(:knifeapps, :data_export, @args.size)
     when 'logs','logs-all'
       usage('vmc_knife logs-all')
       @args.shift # consumes the argument.
@@ -224,7 +220,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       `cd /tmp; [ -d "vmc-knife" ] && rm -rf vmc-knife; git clone https://github.com/hmalphettes/vmc-knife.git; cd vmc-knife; gem build vmc_knife.gemspec; gem install vmc_knife`
       exit 0
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-app/data/all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
     else
       super
     end

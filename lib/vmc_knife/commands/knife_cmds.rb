@@ -233,6 +233,14 @@ module VMC::Cli::Command
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
     end
+    def delete_apps(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
+    end
+    def delete_data(services_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:delete,nil,nil,services_names_regexp,manifest_file_path,
+                        {:data_only=>true})
+    end
     def data_shell(data_names_regexp=nil,file_or_cmd=nil,app_name=nil,manifest_file_path=nil)
       file_name = nil
       cmd = nil
