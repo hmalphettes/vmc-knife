@@ -120,7 +120,7 @@ module VMC
         end
         cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}#{db_arg}"
         if commands_file
-          if mongo_shell == 'mongo'
+          if exec_name == 'mongo'
             if File.exists? commands_file
               # not supported yet.
               commands_file = "--eval \"#{`cat commands_file`}"
