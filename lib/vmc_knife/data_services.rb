@@ -444,12 +444,12 @@ module VMC
       def apply_privileges(app_name=nil)
         if is_postgresql()
           cmd_acl="GRANT CREATE ON SCHEMA PUBLIC TO PUBLIC;\
-          GRANT ALL ON ALL TABLES IN SCHEMA PUBLIC TO PUBLIC;\
-          GRANT ALL ON ALL FUNCTIONS IN SCHEMA PUBLIC TO PUBLIC;\
-          GRANT ALL ON ALL SEQUENCES IN SCHEMA PUBLIC TO PUBLIC;\
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO PUBLIC;\
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO PUBLIC;\
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO PUBLIC;"
+  GRANT ALL ON ALL TABLES IN SCHEMA PUBLIC TO PUBLIC;\
+  GRANT ALL ON ALL FUNCTIONS IN SCHEMA PUBLIC TO PUBLIC;\
+  GRANT ALL ON ALL SEQUENCES IN SCHEMA PUBLIC TO PUBLIC;\
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO PUBLIC;\
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO PUBLIC;\
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO PUBLIC;"
 #          shell(cmd_acl,true)
           
           # reset the owner of the functions to the current user
@@ -465,14 +465,18 @@ module VMC
               return
             end
             fcts_name=shell(cmd_select_fcts,true,true)
-            fcts = fcts_name.split("\n").collect do |line|
-              line.strip!
-              "'#{line}'"
-            end.join(',')
-            cmd_change_fcts_owner="UPDATE pg_catalog.pg_proc \
-                SET proowner = (SELECT oid FROM pg_roles WHERE rolname = '#{current_owner}')\
-                WHERE pg_proc.proname IN (#{fcts})"
-            puts `sudo -u postgres psql --dbname #{credentials()['name']} -c \"#{cmd_change_fcts_owner}\" #{PSQL_RAW_RES_ARGS}`
+            if fcts_name.empty?
+              puts "No need to re-assign the ownership of the functions in #{credentials()['name']}; the DB does not define its own functions." if VMC::Cli::Config.trace
+            else
+              fcts = fcts_name.split("\n").collect do |line|
+                line.strip!
+                "'#{line}'"
+              end.join(',')
+              cmd_change_fcts_owner="UPDATE pg_catalog.pg_proc \
+ SET proowner = (SELECT oid FROM pg_roles WHERE rolname = '#{current_owner}')\
+ WHERE pg_proc.proname IN (#{fcts})"
+              puts `sudo -u postgres psql --dbname #{credentials()['name']} -c \"#{cmd_change_fcts_owner}\" #{PSQL_RAW_RES_ARGS}`
+            end
           end
         end
       end
