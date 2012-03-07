@@ -612,7 +612,7 @@ module VMC
                   elsif wget_args.kind_of? String
                     wget_args_str = wget_args
                   end
-                  `wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url}`
+                  `touch /tmp/wget_#{@application_json['name']}; wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url} --output-file=/tmp/wget_#{@application_json['name']}`
                   raise "Unable to download #{url}" unless $? == 0
                   if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
                     `tar zxvf #{tmp_download_filename}`
