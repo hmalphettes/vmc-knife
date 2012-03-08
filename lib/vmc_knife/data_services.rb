@@ -232,6 +232,7 @@ module VMC
       include Interactive
       
       # The credentials hash for this data-service
+      # param app_name The favored app usually bound to this data_service
       def credentials(app_name=nil)
         #bound_app is the name of an app bound to the dat-service and that credentials
         #should be used to access the data-service.

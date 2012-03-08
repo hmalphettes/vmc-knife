@@ -581,6 +581,101 @@ module VMC
         end
       end
       
+      def version_available()
+        if @application_json['repository']['version_available'] && @application_json['repository']['version_available']['url']
+          version_available_url=@application_json['repository']['version_available']['url']
+          url = @application_json['repository']['url']
+          cmd=@application_json['repository']['version_available']['cmd']
+          if version_available_url.start_with?("./")
+            rel_url=File.dirname(url)
+            version_available_url.slice!(0)
+            version_available_url.slice!(0)
+            version_available_file||=version_available_file
+            version_available_url="#{rel_url}/#{version_available_url}"
+            p "version_available_url: #{version_available_url}"
+            p "extract with #{cmd}"
+          end
+          ## This will find out the available version.
+`version_built_download=/tmp/version_built_download
+wget #{wget_args()} --output-document=$version_built_download #{version_available_url} --output-file=/tmp/wget_#{@application_json['name']}_available`
+          available_version=`version_built_download=/tmp/version_built_download;#{cmd}`.strip
+          available_version.gsub(/^["']|["']$/, '')
+        end
+      end
+
+      # returns the internal id of the app in the cloud_controller database
+      def ccdb_app_id()
+        KNIFE::get_app_id(@current_name)
+      end
+      
+      def ccdb_staged_hash()
+        db=KNIFE::get_ccdb_credentials()
+        # todo: add the id of the current vcap user. not a problem unless we have multiple vcap users.
+        app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{@current_name}'\" #{PSQL_RAW_RES_ARGS}`
+        unless app_id
+          raise "Can't find the app #{@current_name} amongst the deployed apps in the cloud_controller."
+        end
+        staged_hash=`psql --username #{db['username']} --dbname #{db['database']} -c \"select staged_package_hash from apps where id='#{app_id}'\" #{PSQL_RAW_RES_ARGS}`
+        unless app_id
+          raise "The app #{@current_name} is not staged yet."
+        end
+        staged_hash.strip! if staged_hash
+        staged_hash
+      end
+      
+      def version_installed()
+        # go into the cloud_controller db, find out the staged_hash
+        staged_hash=ccdb_staged_hash()
+        droplet="/var/vcap/shared/droplets/#{staged_hash}"
+        raise "Can't find the staged droplet file #{droplet}." unless File.exist?(droplet)
+        # extract the file that contains the version from that tar.gz
+        version_available_file=@application_json['repository']['version_installed']['staged_entry'] if @application_json['repository']['version_installed']
+        unless version_available_file
+          puts "Don't know what file stores the version installed of #{@current_name}" if VMC::Cli::Config.trace
+          return
+        end
+        cmd||=@application_json['repository']['version_installed']['cmd']
+        cmd=@application_json['repository']['version_available']['cmd']
+        unless cmd
+          puts "Don't know how to read the version installed with a cmd." if VMC::Cli::Config.trace
+          return
+        end
+        puts "Looking for the installed version here #{droplet} // #{version_available_file}"
+        droplet_dot_version="#{droplet}.version"
+        unless File.exists? droplet_dot_version
+          Dir.chdir("/tmp") do
+            `[ -f #{version_available_file} ] && rm #{version_available_file}`
+            `tar -xzf #{droplet} #{version_available_file}`
+            if File.exist?(version_available_file)
+              `cp #{version_available_file} #{droplet_dot_version}`
+            else
+              raise "Could not find the installed version file here: here #{droplet} // #{version_available_file}" if VMC::Cli::Config.trace
+            end
+          end
+        end
+        if File.exists? droplet_dot_version
+          installed_version=`version_built_download=#{droplet_dot_version};#{cmd}`.strip
+          raise "could not read the installed version in \
+              #{File.expand_path(version_available_file)} with version_built_download=#{droplet_dot_version};#{cmd}" unless installed_version
+          installed_version.gsub!(/^["']|["']$/, '')
+          puts "#{@current_name} is staged with version installed_version #{installed_version}"
+          return installed_version
+        end
+        exit 123
+      end
+      
+      def wget_args()
+        _wget_args = @application_json['repository']['wget_args']
+        if _wget_args.nil?
+          wget_args_str = ""
+        elsif _wget_args.kind_of? Array
+          wget_args_str = wget_args.join(' ')
+        elsif _wget_args.kind_of? String
+          wget_args_str = wget_args
+        end
+        wget_args_str
+      end
+      
       def upload()
         raise "The application #{@application_json['name']} does not exist yet" if current().empty?
         return unless @application_json['repository']
@@ -591,8 +686,7 @@ module VMC
           `rm -rf #{app_download_dir}` if File.exist? "#{app_download_dir}/#{tmp_download_filename}"
           FileUtils.mkdir_p app_download_dir
           Dir.chdir(app_download_dir) do
-            if Dir.entries(Dir.pwd).size == 2
-              #empty directory.
+            if true #Dir.entries(Dir.pwd).size == 2 #empty directory ?
               if /\.git$/ =~ url
                 `git clone #{url} --depth 1`
                 branch = @application_json['repository']['branch']
@@ -604,15 +698,24 @@ module VMC
                 `git pull origin #{branch}`
               else
                 begin
-                  wget_args = @application_json['repository']['wget_args']
-                  if wget_args.nil?
-                    wget_args_str = ""
-                  elsif wget_args.kind_of? Array
-                    wget_args_str = wget_args.join(' ')
-                  elsif wget_args.kind_of? String
-                    wget_args_str = wget_args
+                  installed_version=version_installed()
+                  p "#{@current_name} installed_version #{installed_version}"
+                  available_version=version_available()
+                  p "#{@current_name} available_version #{available_version}"
+                  if installed_version == available_version
+                    puts "The staged version of #{@current_name} is the same than the one on the remote repository"
+                    return
                   end
-                  `touch /tmp/wget_#{@application_json['name']}; wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url} --output-file=/tmp/wget_#{@application_json['name']}`
+                rescue => e
+                  p "Trying to read the installed and available version crashed. #{e}"
+                end
+                
+                begin
+                  wget_args_str = wget_args()
+                  #`wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url}`
+                  #TODO: find the same file in the installed apps.
+`touch /tmp/wget_#{@application_json['name']};\
+ wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url} --output-file=/tmp/wget_#{@application_json['name']}`
                   raise "Unable to download #{url}" unless $? == 0
                   if /\.tgz$/ =~ url || /\.tar\.gz$/ =~ url
                     `tar zxvf #{tmp_download_filename}`
@@ -622,7 +725,7 @@ module VMC
                     `unzip #{tmp_download_filename}`
                   end
                 ensure
-                  `rm #{tmp_download_filename}`
+                  `[ -f #{tmp_download_filename} ] && rm #{tmp_download_filename}`
                 end
               end
             end
@@ -634,22 +737,22 @@ module VMC
       end
       
       def start()
-        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
-        return if current[:state] == 'STARTED'
+        #raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current().empty? || current[:state] == 'STARTED'
         current[:state] = 'STARTED'
         client.update_app(@application_json['name'], current())
       end
       
       def stop()
-        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
-        return if current[:state] == 'STOPPED'
+        #raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return if current().empty? || current[:state] == 'STOPPED'
         current[:state] = 'STOPPED'
         client.update_app(@application_json['name'], current())
       end
       
       def delete()
-        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
-        client.delete_app(@application_json['name'])
+        client.delete_app(@application_json['name']) unless current().empty?
+        #raise "The application #{@application_json['name']} does not exist yet" if current().empty?
       end
 
       # Generate the updated application manifest:
