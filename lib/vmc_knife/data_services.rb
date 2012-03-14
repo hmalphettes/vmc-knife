@@ -122,8 +122,7 @@ module VMC
         if commands_file
           if exec_name == 'mongo'
             if File.exists? commands_file
-              # not supported yet.
-              commands_file = "--eval \"#{`cat commands_file`}"
+              commands_file = "--eval \"`cat #{commands_file}`\""
             else
               commands_file = "--eval \"#{commands_file}\""
             end

@@ -329,7 +329,7 @@ module VMC
       def upload()
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
-          application_updater.upload
+          application_updater.upload(@opts[:force])
         end
       end
       def delete()
@@ -582,6 +582,7 @@ module VMC
       end
       
       def version_available()
+        return unless @application_json['repository']
         if @application_json['repository']['version_available'] && @application_json['repository']['version_available']['url']
           version_available_url=@application_json['repository']['version_available']['url']
           url = @application_json['repository']['url']
@@ -624,12 +625,25 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       end
       
       def version_installed()
+        return unless @application_json['repository']
         # go into the cloud_controller db, find out the staged_hash
         staged_hash=ccdb_staged_hash()
+        return unless staged_hash && !staged_hash.empty?
         droplet="/var/vcap/shared/droplets/#{staged_hash}"
         raise "Can't find the staged droplet file #{droplet}." unless File.exist?(droplet)
         # extract the file that contains the version from that tar.gz
         version_available_file=@application_json['repository']['version_installed']['staged_entry'] if @application_json['repository']['version_installed']
+        unless version_available_file
+          # default on the 
+          if @application_json['repository']['version_available'] && @application_json['repository']['version_available']['url']
+            version_available_url=@application_json['repository']['version_available']['url']
+            if version_available_url.start_with?("./")
+              version_available_url.slice!(0)
+              version_available_url.slice!(0)
+              version_available_file=version_available_url
+            end
+          end
+        end
         unless version_available_file
           puts "Don't know what file stores the version installed of #{@current_name}" if VMC::Cli::Config.trace
           return
@@ -676,14 +690,32 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         wget_args_str
       end
       
-      def upload()
+      def upload(force=false)
         raise "The application #{@application_json['name']} does not exist yet" if current().empty?
         return unless @application_json['repository']
         url = @application_json['repository']['url']
+        do_delete_download=false
+        begin
+          installed_version=version_installed()
+          p "#{@current_name} installed_version #{installed_version}"
+          available_version=version_available()
+          p "#{@current_name} available_version #{available_version}"
+          if installed_version == available_version
+            puts "The staged version of #{@current_name} is the same than the one on the remote repository"
+            return unless force
+            puts "Forced download"
+          end
+          do_delete_download=true
+        rescue => e
+          p "Trying to read the installed and available version crashed. #{e}"
+        end
+        
         Dir.chdir(ENV['HOME']) do
           tmp_download_filename="_download_.zip"
           app_download_dir="vmc_knife_downloads/#{@application_json['name']}"
+          `rm -rf #{app_download_dir}` if File.exist?("#{app_download_dir}") && do_delete_download
           `rm -rf #{app_download_dir}` if File.exist? "#{app_download_dir}/#{tmp_download_filename}"
+          
           FileUtils.mkdir_p app_download_dir
           Dir.chdir(app_download_dir) do
             if true #Dir.entries(Dir.pwd).size == 2 #empty directory ?
@@ -696,20 +728,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
                   branch='master'
                 end
                 `git pull origin #{branch}`
-              else
-                begin
-                  installed_version=version_installed()
-                  p "#{@current_name} installed_version #{installed_version}"
-                  available_version=version_available()
-                  p "#{@current_name} available_version #{available_version}"
-                  if installed_version == available_version
-                    puts "The staged version of #{@current_name} is the same than the one on the remote repository"
-                    return
-                  end
-                rescue => e
-                  p "Trying to read the installed and available version crashed. #{e}"
-                end
-                
+              else                
                 begin
                   wget_args_str = wget_args()
                   #`wget #{wget_args_str} --output-document=#{tmp_download_filename} #{url}`

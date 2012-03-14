@@ -216,7 +216,7 @@ module VMC::Cli::Command
     
     def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:upload,nil,app_names_regexp,nil,manifest_file_path,
-                        {:apps_only=>true})
+                        {:apps_only=>true, :force=>@options[:force]})
     end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:start,nil,app_names_regexp,nil,manifest_file_path,
