@@ -607,8 +607,8 @@ module VMC
             rel_url=File.dirname(url)
             version_available_file||=version_available_file
             version_available_url="#{rel_url}/#{version_available_url}"
-            p "version_available_url: #{version_available_url}"
-            p "extract with #{cmd}"
+            p "version_available_url: #{version_available_url}" if VMC::Cli::Config.trace
+            p "extract with #{cmd}" if VMC::Cli::Config.trace
           end
           ## This will find out the available version.
 `version_built_download=/tmp/version_built_download
