@@ -600,9 +600,11 @@ module VMC
           url = @application_json['repository']['url']
           cmd=@application_json['repository']['version_available']['cmd']
           if version_available_url.start_with?("./")
+            version_available_url.slice!(0)
+            version_available_url.slice!(0)
+          end
+          unless /:\/\// =~ version_available_url || version_available_url.start_with?("/")
             rel_url=File.dirname(url)
-            version_available_url.slice!(0)
-            version_available_url.slice!(0)
             version_available_file||=version_available_file
             version_available_url="#{rel_url}/#{version_available_url}"
             p "version_available_url: #{version_available_url}"
@@ -656,7 +658,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         # extract the file that contains the version from that tar.gz
         version_available_file=@application_json['repository']['version_installed']['staged_entry'] if @application_json['repository']['version_installed']
         unless version_available_file
-          # default on the available url
+          # default on the available url prefixed by the 'app' folder
           if @application_json['repository']['version_available'] && @application_json['repository']['version_available']['url']
             version_available_url=@application_json['repository']['version_available']['url']
             if version_available_url.start_with?("./")
