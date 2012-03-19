@@ -680,7 +680,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           puts "Don't know how to read the version installed with a cmd." if VMC::Cli::Config.trace
           return
         end
-        puts "Looking for the installed version here #{droplet} // #{version_available_file}"
+        puts "Looking for the installed version here #{droplet} // #{version_available_file}" if VMC::Cli::Config.trace
         puts "   with cmd #{cmd}" if VMC::Cli::Config.trace
         droplet_dot_version="#{droplet}.version"
         unless File.exists? droplet_dot_version
