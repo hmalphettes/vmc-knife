@@ -332,6 +332,18 @@ module VMC
           application_updater.upload(@opts[:force])
         end
       end
+      def update()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.update(@opts[:force])
+        end
+      end
+      def info()
+        @applications.each do |application|
+          application_updater = ApplicationManifestApplier.new application, @client
+          application_updater.info()
+        end
+      end
       def delete()
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
@@ -608,15 +620,24 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       def ccdb_app_id()
         KNIFE::get_app_id(@current_name)
       end
-      
+      # the sha1 of the staged package
       def ccdb_staged_hash()
+        ccdb_app_hash('staged_package_hash')
+      end
+      # The sha1 of the package; not staged
+      def ccdb_package_hash()
+        ccdb_app_hash('package_hash')
+      end
+
+      # hash_type: 'staged_package_hash' or 'package_hash'
+      def ccdb_app_hash(hash_type='staged_package_hash')
         db=KNIFE::get_ccdb_credentials()
         # todo: add the id of the current vcap user. not a problem unless we have multiple vcap users.
         app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{@current_name}'\" #{PSQL_RAW_RES_ARGS}`
         unless app_id
           raise "Can't find the app #{@current_name} amongst the deployed apps in the cloud_controller."
         end
-        staged_hash=`psql --username #{db['username']} --dbname #{db['database']} -c \"select staged_package_hash from apps where id='#{app_id}'\" #{PSQL_RAW_RES_ARGS}`
+        staged_hash=`psql --username #{db['username']} --dbname #{db['database']} -c \"select #{hash_type} from apps where id='#{app_id}'\" #{PSQL_RAW_RES_ARGS}`
         unless app_id
           raise "The app #{@current_name} is not staged yet."
         end
@@ -626,6 +647,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       
       def version_installed()
         return unless @application_json['repository']
+        return unless ccdb_app_id()
         # go into the cloud_controller db, find out the staged_hash
         staged_hash=ccdb_staged_hash()
         return unless staged_hash && !staged_hash.empty?
@@ -678,6 +700,21 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         exit 123
       end
       
+      def info()
+        app_id=ccdb_app_id()
+        if app_id
+          staged_hash=ccdb_staged_hash()||"deployed; not staged"
+          installed_v=version_installed()||"deployed; can't read installed version"
+        else
+          installed_v="not uploaded"
+          staged_hash="not staged"
+        end
+        available_v=version_available()||"none"
+        puts "Application #{@application_json['name']}"
+        puts "  Version installed: #{installed_v}; Staged hash: #{staged_hash}"
+        puts "  Version available: #{available_v}"
+      end
+      
       def wget_args()
         _wget_args = @application_json['repository']['wget_args']
         if _wget_args.nil?
@@ -690,10 +727,8 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         wget_args_str
       end
       
-      def upload(force=false)
+      def update(force=false)
         raise "The application #{@application_json['name']} does not exist yet" if current().empty?
-        return unless @application_json['repository']
-        url = @application_json['repository']['url']
         do_delete_download=false
         begin
           installed_version=version_installed()
@@ -708,7 +743,15 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           do_delete_download=true
         rescue => e
           p "Trying to read the installed and available version crashed. #{e}"
+          p e.backtrace.join("\n")
         end
+        upload(force,do_delete_download)
+      end
+      
+      def upload(force=false,do_delete_download=false)
+        raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        return unless @application_json['repository']
+        url = @application_json['repository']['url']
         
         Dir.chdir(ENV['HOME']) do
           tmp_download_filename="_download_.zip"
@@ -718,7 +761,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           
           FileUtils.mkdir_p app_download_dir
           Dir.chdir(app_download_dir) do
-            if true #Dir.entries(Dir.pwd).size == 2 #empty directory ?
+            if Dir.entries(Dir.pwd).size == 2 #empty directory ?
               if /\.git$/ =~ url
                 `git clone #{url} --depth 1`
                 branch = @application_json['repository']['branch']
@@ -747,9 +790,16 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
                   `[ -f #{tmp_download_filename} ] && rm #{tmp_download_filename}`
                 end
               end
+=begin            else
+              if /\.git$/ =~ url
+                branch = @application_json['repository']['branch']||"master"
+                `git checkout #{branch}`
+                `git pull origin #{branch}`
+=end
+              end
             end
             Dir.chdir(@application_json['repository']['sub_dir']) if @application_json['repository']['sub_dir']
-            `rm -rf .git` if File.exists? ".git"
+            `rm -rf .git` if File.exists? ".git" # don't deploy the .git repo
             VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
           end
         end

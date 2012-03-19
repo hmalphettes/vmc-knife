@@ -213,9 +213,12 @@ module VMC::Cli::Command
       end
       configurer.execute
     end
-    
     def upload_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:upload,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :force=>@options[:force]})
+    end
+    def update_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:update,nil,app_names_regexp,nil,manifest_file_path,
                         {:apps_only=>true, :force=>@options[:force]})
     end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
@@ -228,6 +231,10 @@ module VMC::Cli::Command
     end
     def restart_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:restart,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true})
+    end
+    def info_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:info,nil,app_names_regexp,nil,manifest_file_path,
                         {:apps_only=>true})
     end
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)

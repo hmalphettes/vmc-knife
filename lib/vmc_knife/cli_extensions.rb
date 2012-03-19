@@ -93,11 +93,11 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
     when 'upload-applications','upload-apps'
       usage('vmc_knife upload-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
-      if @args.size <= 2
-        set_cmd(:knifeapps, :upload_applications, @args.size)
-      else
-        set_cmd(:knifeapps, :upload_applications, @args.size) # too many
-      end
+      set_cmd(:knifeapps, :upload_applications, @args.size)
+    when 'update-applications','update-apps'
+      usage('vmc_knife update-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :update_applications, @args.size)
     when 'start-applications','start-apps'
       usage('vmc_knife start-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
@@ -122,6 +122,10 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       else
         set_cmd(:knifeapps, :restart_applications, @args.size) # too many
       end
+    when 'info-applications','info-apps','version-apps'
+      usage('vmc_knife info-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :info_applications, @args.size)
     when 'delete-all'
       usage('vmc_knife delete-all [<applications_regexp>]')
       @args.shift # consumes the argument.
