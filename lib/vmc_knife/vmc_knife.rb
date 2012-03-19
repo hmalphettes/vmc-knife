@@ -656,13 +656,15 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         # extract the file that contains the version from that tar.gz
         version_available_file=@application_json['repository']['version_installed']['staged_entry'] if @application_json['repository']['version_installed']
         unless version_available_file
-          # default on the 
+          # default on the available url
           if @application_json['repository']['version_available'] && @application_json['repository']['version_available']['url']
             version_available_url=@application_json['repository']['version_available']['url']
             if version_available_url.start_with?("./")
               version_available_url.slice!(0)
               version_available_url.slice!(0)
-              version_available_file=version_available_url
+              version_available_file="app/#{version_available_url}"
+            elsif !(/:\/\// =~ version_available_url) && !(version_available_url.start_with?("/"))
+              version_available_file="app/#{version_available_url}"
             end
           end
         end
@@ -670,13 +672,14 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           puts "Don't know what file stores the version installed of #{@current_name}" if VMC::Cli::Config.trace
           return
         end
-        cmd||=@application_json['repository']['version_installed']['cmd']
-        cmd=@application_json['repository']['version_available']['cmd']
+        cmd||=@application_json['repository']['version_installed']['cmd'] if @application_json['repository']['version_installed']
+        cmd||=@application_json['repository']['version_available']['cmd'] if @application_json['repository']['version_available']
         unless cmd
           puts "Don't know how to read the version installed with a cmd." if VMC::Cli::Config.trace
           return
         end
         puts "Looking for the installed version here #{droplet} // #{version_available_file}"
+        puts "   with cmd #{cmd}" if VMC::Cli::Config.trace
         droplet_dot_version="#{droplet}.version"
         unless File.exists? droplet_dot_version
           Dir.chdir("/tmp") do
@@ -685,7 +688,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
             if File.exist?(version_available_file)
               `cp #{version_available_file} #{droplet_dot_version}`
             else
-              raise "Could not find the installed version file here: here #{droplet} // #{version_available_file}" if VMC::Cli::Config.trace
+              put "Could not find the installed version file here: here #{droplet} // #{version_available_file}" if VMC::Cli::Config.trace
             end
           end
         end
@@ -694,10 +697,9 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           raise "could not read the installed version in \
               #{File.expand_path(version_available_file)} with version_built_download=#{droplet_dot_version};#{cmd}" unless installed_version
           installed_version.gsub!(/^["']|["']$/, '')
-          puts "#{@current_name} is staged with version installed_version #{installed_version}"
+          puts "#{@current_name} is staged with version installed_version #{installed_version}" if VMC::Cli::Config.trace
           return installed_version
         end
-        exit 123
       end
       
       def info()
@@ -743,7 +745,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           do_delete_download=true
         rescue => e
           p "Trying to read the installed and available version crashed. #{e}"
-          p e.backtrace.join("\n")
+          p e.backtrace.join("\n") if VMC::Cli::Config.trace
         end
         upload(force,do_delete_download)
       end
@@ -789,7 +791,6 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
                 ensure
                   `[ -f #{tmp_download_filename} ] && rm #{tmp_download_filename}`
                 end
-              end
 =begin            else
               if /\.git$/ =~ url
                 branch = @application_json['repository']['branch']||"master"
