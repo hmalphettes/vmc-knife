@@ -303,7 +303,6 @@ module VMC
              # if we did bind to a database; let's re-assign the ownership of the sql functions
              # to the favorite app if there is such a thing.
              if updates && updates['services'] && updates['services']['add']
-               puts "THE ONE WE ARE DEBUGGING #{JSON.pretty_generate updates['services']}"
                list_services_name=updates['services']['add']
                list_services_name.each do |cf_service_name|
                  @data_services.each do |data_service|
@@ -311,7 +310,6 @@ module VMC
                      # is this the privileged app?
                      priv_app_name = data_service.wrapped['director']['bound_app'] if data_service.wrapped['director']
                      if priv_app_name == application.name
-                       puts "GOT THE PRIVILEGED APP #{application.name} for the service #{data_service.role_name}"
                        data_service.apply_privileges(priv_app_name)
                      end
                    end
@@ -509,8 +507,11 @@ module VMC
         client.create_service @data_service_json['vendor'], @data_service_json['name']
       end
       def delete()
-        raise "The service #{@data_service_json['name']} does not exist." if current().empty?
-        client.delete_service(@data_service_json['name'])
+        if current().empty?
+          puts "The service #{@data_service_json['name']} does not exist." if VMC::Cli::Config.trace
+        else
+          client.delete_service(@data_service_json['name'])
+        end
       end
 
       # Returns the service manifest for the vendor.
@@ -823,8 +824,11 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       end
       
       def delete()
-        client.delete_app(@application_json['name']) unless current().empty?
-        #raise "The application #{@application_json['name']} does not exist yet" if current().empty?
+        if current().empty?
+          puts "The application #{@application_json['name']} does not exist yet" if VMC::Cli::Config.trace
+        else
+          client.delete_app(@application_json['name']) unless current().empty?
+        end
       end
 
       # Generate the updated application manifest:

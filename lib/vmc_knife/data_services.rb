@@ -442,6 +442,7 @@ module VMC
       # Another workaround though really not perfect so it will stay in vmc_knife:
       # the ownership of the SQL functions.
       def apply_privileges(app_name=nil)
+        return if current().empty?
         if is_postgresql()
           cmd_acl="GRANT CREATE ON SCHEMA PUBLIC TO PUBLIC;\
   GRANT ALL ON ALL TABLES IN SCHEMA PUBLIC TO PUBLIC;\
