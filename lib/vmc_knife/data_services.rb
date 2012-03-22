@@ -267,7 +267,11 @@ module VMC
             file=File.expand_path(file,current_wd)
             basename = File.basename(file).to_s
           end
-          if Dir.entries(Dir.pwd).size == 2
+          
+          unless File.exists?(basename)
+            Dir.foreach(Dir.pwd) { |f|
+              File.delete(f) unless f == '.' || f == '..'
+            }
             if file =~ /^https?:\/\// || file =~ /^ftp:\/\//
               wget_args = @wrapped['director']['wget_args']
               if wget_args.nil?
@@ -279,11 +283,11 @@ module VMC
               end
               `wget #{wget_args_str} --output-document=#{basename} #{file}`
               if $? != 0
-                `rm #{data_download_dir}/#{basename}`
+                File.delete("#{data_download_dir}/#{basename}")
                 raise "Unable to successfully download #{file}"
               end
             else
-              `cp #{file} #{basename}`
+              FileUtils.cp(file, basename)
             end
           end
           #unzip if necessary (in progress)
