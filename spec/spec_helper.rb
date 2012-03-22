@@ -5,7 +5,7 @@ require 'bundler/setup'
 require 'vmc_knife'
 require 'cli'
 
-require 'spec'
+require 'rspec'
 
 def spec_asset(filename)
   File.expand_path(File.join(File.dirname(__FILE__), "assets", filename))
