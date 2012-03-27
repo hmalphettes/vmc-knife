@@ -337,10 +337,14 @@ module VMC
         end
       end
       def info()
+        up_to_date=true
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
-          application_updater.info()
+          app_up_to_date = application_updater.info()
+          up_to_date = false unless app_up_to_date
         end
+        puts "All up to date: #{up_to_date}"
+        return up_to_date
       end
       def delete()
         @applications.each do |application|
@@ -718,6 +722,8 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         puts "Application #{@application_json['name']}"
         puts "  Version installed: #{installed_v}; Staged hash: #{staged_hash}"
         puts "  Version available: #{available_v}"
+        return installed_v == available_v if installed_v && available_v
+        return false
       end
       
       def wget_args()
