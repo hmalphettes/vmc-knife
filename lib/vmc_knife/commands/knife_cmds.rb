@@ -238,6 +238,11 @@ module VMC::Cli::Command
                         {:apps_only=>true})
       exit 1 unless res
     end
+    def info_configure(app_names_regexp=nil,manifest_file_path=nil)
+      res=recipe_configuror(:info,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :configure_only=>true})
+      exit 1 unless res
+    end
     def delete_all(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:delete,nil,app_names_regexp,nil,manifest_file_path)
     end

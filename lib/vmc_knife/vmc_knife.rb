@@ -337,10 +337,19 @@ module VMC
         end
       end
       def info()
-        up_to_date=true
+				configure_only=@opts[:configure_only] || false
+        if configure_only                                                                                                              
+					if updates_pending().empty?
+						puts "All configuration up to date: false"
+						return false
+					else
+						puts "All configuration up to data: true"
+						return true
+					end
+				end
+			  up_to_date=true
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
-          app_up_to_date = application_updater.info()
           up_to_date = false unless app_up_to_date
         end
         puts "All up to date: #{up_to_date}"

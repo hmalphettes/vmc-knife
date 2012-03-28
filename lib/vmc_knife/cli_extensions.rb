@@ -126,6 +126,10 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       usage('vmc_knife info-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :info_applications, @args.size)
+    when 'info-configure','info-configure'
+      usage('vmc_knife info-configure [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :info_configure, @args.size)
     when 'delete-all'
       usage('vmc_knife delete-all [<applications_regexp>]')
       @args.shift # consumes the argument.
