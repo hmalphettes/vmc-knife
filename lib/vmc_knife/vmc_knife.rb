@@ -338,14 +338,14 @@ module VMC
       end
       def info()
 				configure_only=@opts[:configure_only] || false
-        if configure_only                                                                                                              
-					if updates_pending().empty?
-						puts "All configuration up to date: false"
-						return false
-					else
-						puts "All configuration up to data: true"
-						return true
-					end
+        if configure_only                                          
+          if updates_pending().empty?
+            puts "All configuration up to date: true"
+            return true
+          else
+            puts "All configuration up to data: false"
+            return false
+          end
 				end
 			  up_to_date=true
         @applications.each do |application|
