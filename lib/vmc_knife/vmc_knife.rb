@@ -640,11 +640,11 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       def ccdb_app_hash(hash_type='staged_package_hash')
         db=KNIFE::get_ccdb_credentials()
         # todo: add the id of the current vcap user. not a problem unless we have multiple vcap users.
-        app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{@current_name}'\" #{PSQL_RAW_RES_ARGS}`
+        app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{@current_name}'\" #{PSQL_RAW_RES_ARGS}`.strip
         unless app_id
           raise "Can't find the app #{@current_name} amongst the deployed apps in the cloud_controller."
         end
-        staged_hash=`psql --username #{db['username']} --dbname #{db['database']} -c \"select #{hash_type} from apps where id='#{app_id}'\" #{PSQL_RAW_RES_ARGS}`
+        staged_hash=`psql --username #{db['username']} --dbname #{db['database']} -c \"select #{hash_type} from apps where id='#{app_id}'\" #{PSQL_RAW_RES_ARGS}`.strip
         unless app_id
           raise "The app #{@current_name} is not staged yet."
         end

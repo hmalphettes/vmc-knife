@@ -30,14 +30,14 @@ module VMC
         
     def self.get_app_id(app_name)
        db=get_ccdb_credentials()
-       app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{app_name}'\" #{PSQL_RAW_RES_ARGS}`
-       app_id
+       app_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from apps where name='#{app_name}'\" #{PSQL_RAW_RES_ARGS}`.strip
+       app_id unless app_id.empty?
     end
     def self.get_service_config_id(service_name)
        db=get_ccdb_credentials()
        #todo add the user_id
-       service_config_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
-       service_config_id
+       service_config_id = `psql --username #{db['username']} --dbname #{db['database']} -c \"select id from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`.strip
+       service_config_id unless service_config_id.empty?
     end
     
     # Returns a hash of the credentials for a data-service
@@ -65,7 +65,7 @@ module VMC
     def self.get_credentials(service_name, app_name=nil)
        db=get_ccdb_credentials()
        if app_name.nil?
-         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
+         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`.strip
        else
          app_id = get_app_id(app_name)
 				 if app_id.nil?
@@ -73,7 +73,7 @@ module VMC
 					 return
 				 end
          service_config_id = get_service_config_id(service_name)
-         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_bindings where app_id = '#{app_id}' and service_config_id='#{service_config_id}'\" #{PSQL_RAW_RES_ARGS}`
+         credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_bindings where app_id = '#{app_id}' and service_config_id='#{service_config_id}'\" #{PSQL_RAW_RES_ARGS}`.strip
        end
        res = Hash.new
        credentials_str.split("\n").each do | line |
@@ -332,7 +332,7 @@ module VMC
               #`pg_restore --dbname=#{dbname} --username=#{username} --no-acl --no-privileges --no-owner #{file}`
             end
             puts cmd
-            puts `#{cmd}`
+            puts `#{cmd}`.strip
             `chmod o-w #{file}`
           elsif is_mongodb
             
