@@ -68,6 +68,10 @@ module VMC
          credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_configs where alias='#{service_name}'\" #{PSQL_RAW_RES_ARGS}`
        else
          app_id = get_app_id(app_name)
+				 if app_id.nil?
+					 puts "WARN: No application named #{app_name} exists at this point" if VMC::Cli::Config.trace
+					 return
+				 end
          service_config_id = get_service_config_id(service_name)
          credentials_str = `psql --username #{db['username']} --dbname #{db['database']} -c \"select credentials from service_bindings where app_id = '#{app_id}' and service_config_id='#{service_config_id}'\" #{PSQL_RAW_RES_ARGS}`
        end
