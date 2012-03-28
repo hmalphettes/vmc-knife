@@ -350,7 +350,8 @@ module VMC
 			  up_to_date=true
         @applications.each do |application|
           application_updater = ApplicationManifestApplier.new application, @client
-          up_to_date = false unless app_up_to_date
+          app_up_to_date = application_updater.info()
+					up_to_date = false unless app_up_to_date
         end
         puts "All up to date: #{up_to_date}"
         return up_to_date
