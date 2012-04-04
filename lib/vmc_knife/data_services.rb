@@ -120,9 +120,9 @@ module VMC
         elsif exec_name == 'mongodump'
           db_arg = "" # dump all the databases including 'admin' which contains the users.
         else
-          db_arg = "--db #{credentials_hash['db']}"
+          db_arg = " --db #{credentials_hash['db']}"
         end
-        cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{credentials_hash['hostname']}:#{credentials_hash['port']}#{db_arg}"
+        cmd = "#{mongo_shell} -u #{credentials_hash['username']} -p #{credentials_hash['password']} #{'-h' if(exec_name=='mongorestore')} #{credentials_hash['hostname']}:#{credentials_hash['port']}#{db_arg}"
         if commands_file
           if exec_name == 'mongo'
             if File.exists? commands_file
@@ -310,7 +310,7 @@ module VMC
           if is_unzipped
             #`rm #{basename}`
             files = Dir.glob("*.sql") if is_postgresql
-            files = Dir.glob("*.bson") if is_mongodb
+            files = Dir.glob("**/*.bson") if is_mongodb
             files ||= Dir.glob("*")
             raise "Can't find the db-dump file." if files.empty?
             file = files.first
@@ -318,10 +318,11 @@ module VMC
             file = basename
           end
           
+          creds=credentials(app_name)
+          
           if is_postgresql
             p "chmod o+w #{file}"
             `chmod o+w #{file}`
-            creds=credentials(app_name)
             if /\.sql$/ =~ file
               other_params="--file #{file} --quiet"
               cmd = VMC::KNIFE.pg_connect_cmd(creds, 'psql',as_admin=false, other_params)
@@ -346,7 +347,7 @@ module VMC
             if File.exists?(mongod_lock) && File.size(mongod_lock)>0
               # the mongodb instance is currently working. connect to it and do the work.
               # in that case import the 'db' alone. don't do the 'admin'
-              VMC::KNIFE.data_service_console(creds, File.dirname(file),false,'mongorestore')
+              VMC::KNIFE.data_service_console(creds, File.dirname(file), false, 'mongorestore')
             else
               # the mongodb instance is not currently working
               # go directly on the filesystem
