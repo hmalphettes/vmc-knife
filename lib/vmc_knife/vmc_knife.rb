@@ -818,6 +818,17 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
 =end
               end
             end
+            post_download_script = @application_json['repository']['post_download_script']
+            if post_download_script
+              curr_dir=Dir.pwd
+              post_download_script = post_download_script.join("\n") if post_download_script.kind_of?(Array)
+              p "Executing the post_download script : #{post_download_script}"
+              success = system(post_download_script)
+              p "Done executing the post_download script succcess #{success}"
+              exit unless success
+              Dir.chdir(curr_dir)
+            end
+
             Dir.chdir(@application_json['repository']['sub_dir']) if @application_json['repository']['sub_dir']
             `rm -rf .git` if File.exists? ".git" # don't deploy the .git repo
             VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
