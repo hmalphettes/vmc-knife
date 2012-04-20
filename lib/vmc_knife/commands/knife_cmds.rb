@@ -266,7 +266,9 @@ module VMC::Cli::Command
         end
       end
       recipe_configuror(:shell,nil,nil,data_names_regexp,manifest_file_path,
-                        {:file_name=>file_name, :data_cmd=>cmd, :app_name=>app_name, :data_only=>true})
+                        {:file_name=>file_name, :data_cmd=>cmd, 
+                         :app_name=>app_name, :data_only=>true,
+                         :single_service=>true})
     end
     def data_credentials(data_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:credentials,nil,nil,data_names_regexp,manifest_file_path,
@@ -319,15 +321,19 @@ module VMC::Cli::Command
       man = load_manifest(manifest_file_path)
       recipes_regexp = as_regexp(recipes_regexp)
       app_names_regexp = as_regexp(app_names_regexp)
-      service_names_regexp = as_regexp(service_names_regexp)
+      service_names_regexp = as_regexp(service_names_regexp, opts[:single_service])
       configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp,opts)
       method_object = configurer.method(method_sym_name)
       method_object.call
     end
     
-    def as_regexp(arg)
+    def as_regexp(arg, strict=false)
       if arg != nil && arg.kind_of?(String) && !arg.strip.empty?
-        Regexp.new(arg)
+        if strict && Regexp.quote(arg) == arg
+          Regexp.new('^'+arg+'$')
+        else
+          Regexp.new(arg)
+        end
       end
     end
     
