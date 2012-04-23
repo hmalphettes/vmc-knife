@@ -915,7 +915,9 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       def update_memory_pending()
         old_mem = current[:resources][:memory] if current[:resources]
         old_mem ||= current['resources']['memory'] if current['resources']
+        old_mem = old_mem.to_i if old_mem && old_mem.kind_of?(String)
         new_mem = @application_json['resources']['memory'] unless @application_json['resources'].nil?
+        new_mem = new_mem.to_i if new_mem && new_mem.kind_of?(String)
         if old_mem != new_mem
           return "#{old_mem} => #{new_mem}"
         end
