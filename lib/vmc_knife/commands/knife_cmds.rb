@@ -321,8 +321,11 @@ module VMC::Cli::Command
       man = load_manifest(manifest_file_path)
       recipes_regexp = as_regexp(recipes_regexp)
       app_names_regexp = as_regexp(app_names_regexp)
+      opts ||= {}
       service_names_regexp = as_regexp(service_names_regexp, opts[:single_service])
-      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man,client,recipes_regexp,app_names_regexp,service_names_regexp,opts)
+      configurer = VMC::KNIFE::RecipesConfigurationApplier.new(man, client,
+                                                               recipes_regexp, app_names_regexp,
+                                                               service_names_regexp, opts)
       method_object = configurer.method(method_sym_name)
       method_object.call
     end
