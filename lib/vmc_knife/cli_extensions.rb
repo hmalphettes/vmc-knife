@@ -126,6 +126,14 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       usage('vmc_knife info-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :info_applications, @args.size)
+    when 'running?-apps', 'running-apps'
+      usage('vmc_knife running?-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :running_applications?, @args.size)
+    when 'wait-till-running-apps'
+      usage('vmc_knife wait-till-running-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :wait_till_running_applications, @args.size)
     when 'info-configure','info-configure'
       usage('vmc_knife info-configure [<applications_regexp>]')
       @args.shift # consumes the argument.

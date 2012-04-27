@@ -337,7 +337,7 @@ module VMC
         end
       end
       def info()
-				configure_only=@opts[:configure_only] || false
+	configure_only=@opts[:configure_only] || false
         if configure_only                                          
           if updates_pending().empty?
             puts "All configuration up to date: true"
@@ -375,6 +375,63 @@ module VMC
           application_updater = ApplicationManifestApplier.new application, @client
           application_updater.stop
         end
+      end
+      def running_applications?()
+        tries = 1
+        interval = 30
+        if @opts && @opts['wait']
+          tries = @opts['wait']['tries']
+          tries = tries.to_i if tries
+          interval = @opts['wait']['interval']
+          interval = interval.to_i if interval
+        end
+        tries ||= 1
+        interval ||= 30
+        curr_iteration = 0
+        already_running = {}
+        @applications.each do |application|
+          already_running[application.name] = "false"
+        end
+        vmc_apps = Array.new
+        while (curr_iteration <= tries)
+          # brute approach: cmd-line.
+          vmc_apps = ENV['TEST_VMC_APPS_STRING'] # this is for testing.
+          unless vmc_apps
+            vmc_apps = `vmc apps`.strip.split("\n")
+            raise "Unable to run vmc" unless $?.exitstatus == 0
+          end
+          current_healths = Hash.new
+          vmc_apps.each do |line|
+            if line =~ /^\| (\S*)\s*\|\s*\d*\s*\|\s*(\S*)\s*\|/
+               app = $1
+               health = $2
+               current_healths[app] = health
+            end
+          end
+          @applications.each do |application|
+            #health = `echo "#{vmc_apps}" | grep \|\ #{application.name}\ | cut -d '|' -f4`
+            health = current_healths[application.name]
+            already_running[application.name] = health
+          end
+          all_running = true
+          already_running.values.each do |v|
+            if v != "RUNNING"
+              all_running = false
+              break
+            end
+          end
+          curr_iteration = curr_iteration + 1
+          break if all_running || curr_iteration == tries
+          p "sleeping #{interval}s as at least one app is not running yet."
+          sleep(interval)
+        end
+        p "Success: all apps are running" if all_running
+        return true if all_running
+        p "At least one app is not running"
+        vmc_apps.each do |line|
+          p line
+        end
+        return false
       end
       def start()
         @applications.each do |application|
