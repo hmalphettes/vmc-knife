@@ -413,6 +413,7 @@ module VMC
             already_running[application.name] = health
             not_running << application.name unless health == 'RUNNING'
           end
+          all_running = not_running.empty?
           curr_iteration = curr_iteration + 1
           break if not_running.empty? || curr_iteration == tries
           p "Sleeping #{interval}s as #{not_running.join(' ')} #{not_running.size == 1 ? 'is' : 'are' } not running yet."
