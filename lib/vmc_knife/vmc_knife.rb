@@ -406,21 +406,16 @@ module VMC
                current_healths[app] = health
             end
           end
+          not_running = Array.new
           @applications.each do |application|
             #health = `echo "#{vmc_apps}" | grep \|\ #{application.name}\ | cut -d '|' -f4`
             health = current_healths[application.name]
             already_running[application.name] = health
-          end
-          all_running = true
-          already_running.values.each do |v|
-            if v != "RUNNING"
-              all_running = false
-              break
-            end
+            not_running << application.name unless health == 'RUNNING'
           end
           curr_iteration = curr_iteration + 1
-          break if all_running || curr_iteration == tries
-          p "sleeping #{interval}s as at least one app is not running yet."
+          break if not_running.empty? || curr_iteration == tries
+          p "Sleeping #{interval}s as #{not_running.join(' ')} #{not_running.size == 1 ? 'is' : 'are' } not running yet."
           sleep(interval)
         end
         p "Success: all apps are running" if all_running
