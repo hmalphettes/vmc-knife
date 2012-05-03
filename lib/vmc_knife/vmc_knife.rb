@@ -377,12 +377,10 @@ module VMC
         end
       end
       def running_applications?()
-        tries = 1
-        interval = 30
-        if @opts && @opts['wait']
-          tries = @opts['wait']['tries']
+        if @opts && @opts[:wait]
+          tries = @opts[:wait][:retries]
           tries = tries.to_i if tries
-          interval = @opts['wait']['interval']
+          interval = @opts[:wait][:interval]
           interval = interval.to_i if interval
         end
         tries ||= 1
