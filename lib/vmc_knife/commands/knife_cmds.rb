@@ -240,12 +240,12 @@ module VMC::Cli::Command
     end
     def wait_till_running_applications(app_names_regexp=nil,manifest_file_path=nil)
       res=recipe_configuror(:running_applications?,nil,app_names_regexp,nil,manifest_file_path,
-                        {:apps_only=>true})
+                        {:apps_only=>true, :wait=>{:interval=>30,:retries=>6}})
       exit 1 unless res
     end
     def running_applications?(app_names_regexp=nil,manifest_file_path=nil)
       res=recipe_configuror(:running_applications?,nil,app_names_regexp,nil,manifest_file_path,
-                        {:apps_only=>true, :wait=>{:interval=>30,:retries=>6}})
+                        {:apps_only=>true})
       exit 1 unless res
     end
     def info_configure(app_names_regexp=nil,manifest_file_path=nil)

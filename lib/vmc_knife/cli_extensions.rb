@@ -126,7 +126,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       usage('vmc_knife info-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :info_applications, @args.size)
-    when 'running?-apps', 'running-apps'
+    when 'running-apps?', 'running-apps'
       usage('vmc_knife running?-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :running_applications?, @args.size)
@@ -134,7 +134,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       usage('vmc_knife wait-till-running-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :wait_till_running_applications, @args.size)
-    when 'info-configure','info-configure'
+    when 'info-configure','info-configure-apps'
       usage('vmc_knife info-configure [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :info_configure, @args.size)
@@ -236,7 +236,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       `cd /tmp; [ -d "vmc-knife" ] && rm -rf vmc-knife; git clone https://github.com/hmalphettes/vmc-knife.git; cd vmc-knife; gem build vmc_knife.gemspec; gem install vmc_knife`
       exit 0
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|delete-app/data/all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|info-configure-apps|info-apps|running-apps|wait-till-running-apps|delete-app/data/all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
     else
       super
     end
