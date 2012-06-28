@@ -523,7 +523,7 @@ module VMC
           if collection_or_table_names
             sel_tables = "#{sel_tables} AND table_name LIKE '#{collection_or_table_names}'"
           end
-          tables = shell(sel_tables)
+          tables = shell(sel_tables, false, true)
           tables_arr = Array.new
           tables.split("\n").each do | line |
             line.strip!
