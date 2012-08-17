@@ -15,7 +15,7 @@ spec = Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.extra_rdoc_files = ["README.md", "LICENSE"]
 
-  s.add_dependency "vmc", "~> 0.3.14.beta4"
+  s.add_dependency "vmc", "~> 0.3.18"
 
   s.add_dependency "rest-client", ">= 1.6.1", "< 1.7.0"
   #s.add_development_dependency "rake"

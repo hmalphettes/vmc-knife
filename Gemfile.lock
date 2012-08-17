@@ -1,9 +1,9 @@
 PATH
   remote: .
   specs:
-    vmc_knife (0.0.38)
+    vmc_knife (0.0.39)
       rest-client (>= 1.6.1, < 1.7.0)
-      vmc (~> 0.3.14.beta4)
+      vmc (~> 0.3.18)
 
 GEM
   remote: http://rubygems.org/
