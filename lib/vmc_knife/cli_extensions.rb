@@ -98,6 +98,14 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       usage('vmc_knife update-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
       set_cmd(:knifeapps, :update_applications, @args.size)
+    when 'patch-applications','patch-apps'
+      usage('vmc_knife patch-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :patch_applications, @args.size)
+    when 'extract-deployed-apps', 'extract-apps'
+      usage('vmc_knife extract-deployed-apps [<applications_regexp>]')
+      @args.shift # consumes the argument.
+      set_cmd(:knifeapps, :extract_deployed_applications, @args.size)
     when 'start-applications','start-apps'
       usage('vmc_knife start-apps [<applications_regexp>]')
       @args.shift # consumes the argument.
@@ -236,7 +244,7 @@ class VMC::Cli::KnifeRunner < VMC::Cli::Runner
       `cd /tmp; [ -d "vmc-knife" ] && rm -rf vmc-knife; git clone https://github.com/hmalphettes/vmc-knife.git; cd vmc-knife; gem build vmc_knife.gemspec; gem install vmc_knife`
       exit 0
     when 'help'
-      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|info-configure-apps|info-apps|running-apps|wait-till-running-apps|delete-app/data/all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
+      display "vmc_knife expand-manifest|login|start/stop/restart-apps|upload-apps|configure-all|configure-recipes|configure-apps|configure-services|info-configure-apps|info-apps|update-apps|patch-apps|running-apps|wait-till-running-apps|delete-app/data/all|configure-vcap|configure-vcap-mdns|configure-vcap-etc-hosts|data-shell|data-export/import/shrink/drop|logs-less|less|tail|logs-all/apps/vcap|update-self [<manifest_path>]"
     else
       super
     end

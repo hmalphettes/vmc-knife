@@ -221,6 +221,14 @@ module VMC::Cli::Command
       recipe_configuror(:update,nil,app_names_regexp,nil,manifest_file_path,
                         {:apps_only=>true, :force=>@options[:force]})
     end
+    def patch_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:patch,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :force=>@options[:force]})
+    end
+    def extract_deployed_applications(app_names_regexp=nil,manifest_file_path=nil)
+      recipe_configuror(:extract_deployed,nil,app_names_regexp,nil,manifest_file_path,
+                        {:apps_only=>true, :force=>@options[:force]})
+    end
     def start_applications(app_names_regexp=nil,manifest_file_path=nil)
       recipe_configuror(:start,nil,app_names_regexp,nil,manifest_file_path,
                         {:apps_only=>true})
