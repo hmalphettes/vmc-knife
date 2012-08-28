@@ -1,4 +1,8 @@
 require 'json'
+require 'cli/frameworks'
+# add java_start our own framework to the array of well known frameworks
+VMC::Cli::Framework::FRAMEWORKS['JavaGen'] = ['java_start',{ :mem => '512M', :description => 'Java Custom Application'}]
+
 module VMC
   module KNIFE
     module HELPER
