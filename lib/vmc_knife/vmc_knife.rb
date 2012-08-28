@@ -740,6 +740,12 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
               version_available_file= prefix_app_by_default ? "app/#{version_available_url}" : version_available_url
             end
           end
+        else
+          if version_available_file.start_with?('app/') && !prefix_app_by_default
+            version_available_file=version_available_file['app/'.length..-1]
+          elsif version_available_file.start_with?('tomcat/webapp/ROOT/') && !prefix_app_by_default
+            version_available_file=version_available_file['tomcat/webapp/ROOT/'.length..-1]
+          end 
         end
         version_available_file
       end 
@@ -854,7 +860,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
       end
     
       def app_download_dir_path()
-        "~/vmc_knife_downloads/#{@application_json['name']}"
+        "#{ENV['HOME']}/vmc_knife_downloads/#{@application_json['name']}"
       end 
       def extract_deployed(force=false)
         installed_v=version_installed()
@@ -868,7 +874,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           FileUtils.rm_rf app_download_dir if File.exists?(app_download_dir)
           do_extract=true
         elsif File.exists?(app_download_dir)
-          version_file_in_download = version_available_file_path(false)
+          version_file_in_download = File.join(app_download_dir,  version_available_file_path(false))
           p "Reading the version of the downloaded app folder in file #{version_file_in_download}"
           cmd_to_read=cmd_read_version_installed()
           version_downloaded=read_version(version_file_in_download,cmd_to_read)
@@ -961,9 +967,19 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
  
       def upload_app_bits()
         Dir.chdir(app_download_dir_path()) do
+puts "upload_app_bits in #{app_download_dir_path()}"
           Dir.chdir(@application_json['repository']['sub_dir']) if @application_json['repository']['sub_dir']
-          `rm -rf .git` if File.exists? ".git" # don't deploy the .git repo
-          VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
+          tmp_git = "/tmp/#{@application_json['name']}.git"
+          if File.exists? ".git"
+            # don't deploy the .git repo
+            FileUtils.rm_rf(tmp_git) if File.exists?(tmp_git)
+            FileUtils.mv(".git", tmp_git)
+          end
+          begin
+           VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
+          rescue
+            FileUtils.mv(tmp_git, ".git") if File.exists?(tmp_git)
+          end
         end
       end     
 
@@ -971,7 +987,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
         extract_deployed(force)
         app_download_dir=app_download_dir_path() 
         p "Application ready to be patched in #{app_download_dir}"
-        p "Type Y when ready to update. Anything else will stop."
+        p "Type y when ready to update. Anything else will stop."
         ans = STDIN.gets.chomp
         return unless ans && ans.capitalize.start_with?('Y')
         upload_app_bits()
