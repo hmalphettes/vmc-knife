@@ -880,7 +880,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           version_downloaded=read_version(version_file_in_download,cmd_to_read)
 	  if installed_v != version_downloaded
 	    p "The version installed is #{installed_v} and the version ready to be deployed is #{version_downloaded}"
-	    p "Would you like to replace the app to deploy by the one already deployed?"
+	    p "Would you like to replace the app to deploy by the one already deployed?" 
 	    ans = STDIN.gets.chomp
             if ans && ans.capitalize.start_with?('Y')
               FileUtils.rm_rf app_download_dir if File.exists?(app_download_dir)
@@ -975,10 +975,13 @@ puts "upload_app_bits in #{app_download_dir_path()}"
             FileUtils.rm_rf(tmp_git) if File.exists?(tmp_git)
             FileUtils.mv(".git", tmp_git)
           end
+          ori_trace = VMC::Cli::Config.trace
           begin
-           VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
+            VMC::KNIFE::HELPER.static_upload_app_bits(@client,@application_json['name'],Dir.pwd)
           rescue
             FileUtils.mv(tmp_git, ".git") if File.exists?(tmp_git)
+          ensure
+            VMC::Cli::Config.trace = ori_trace
           end
         end
       end     
@@ -987,9 +990,11 @@ puts "upload_app_bits in #{app_download_dir_path()}"
         extract_deployed(force)
         app_download_dir=app_download_dir_path() 
         p "Application ready to be patched in #{app_download_dir}"
-        p "Type y when ready to update. Anything else will stop."
-        ans = STDIN.gets.chomp
-        return unless ans && ans.capitalize.start_with?('Y')
+        if VMC::Cli::Config.trace
+          p "Type y when ready to update. Anything else will stop."
+          ans = STDIN.gets.chomp
+          return unless ans && ans.capitalize.start_with?('Y')
+        end
         upload_app_bits()
       end
  
