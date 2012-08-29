@@ -900,6 +900,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           p "Done. ls -la #{app_download_dir}"
           `ls -la #{app_download_dir}` 
         end 
+        do_extract
       end 
       def upload(force=false,do_delete_download=false)
         raise "The application #{@application_json['name']} does not exist yet" if current().empty?
@@ -987,10 +988,10 @@ puts "upload_app_bits in #{app_download_dir_path()}"
       end     
 
       def patch(force=false)
-        extract_deployed(force)
         app_download_dir=app_download_dir_path() 
+        app_was_extracted = extract_deployed(force)
         p "Application ready to be patched in #{app_download_dir}"
-        if VMC::Cli::Config.trace
+        if VMC::Cli::Config.trace || app_was_extracted
           p "Type y when ready to update. Anything else will stop."
           ans = STDIN.gets.chomp
           return unless ans && ans.capitalize.start_with?('Y')
