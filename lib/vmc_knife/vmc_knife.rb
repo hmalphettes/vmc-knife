@@ -847,7 +847,7 @@ wget #{wget_args()} --output-document=$version_built_download #{version_availabl
           available_version=version_available()
           p "#{@current_name} available_version #{available_version}"
           if installed_version == available_version
-            puts "The staged version of #{@current_name} is the same than the one on the remote repository"
+            puts "The staged version of #{@current_name} is the same as the one on the remote repository"
             return unless force
             puts "Forced download"
           end
